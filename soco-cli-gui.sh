@@ -14,12 +14,14 @@ if [ "$list" = "discovery" ]; then loc="";
 else loc=" -l"; fi
 echo "$loc"	
 #sleep 3
+GITHUB_TOKEN=13314ba0099450eaa6c0b2233d0f6adde1f5c718
 
 italic="\033[3m"
 underline="\033[4m"
 bgd="\033[1;4;31m"
 red="\033[1;31m"
 bold="\033[1m"
+bold_under="\033[1;4m"
 reset="\033[0m"
 
 
@@ -36,7 +38,7 @@ main() {
 		clear
 		
 		echo -e ""
-		echo -e "\033[1m 🔈 SoCo-Cli GUI\033[0m"
+		echo -e "${bold} 🔈 SoCo-Cli GUI${reset}"
 		echo -e ""
 
 		echo -e " "
@@ -72,23 +74,36 @@ main() {
 
 
 about() {
+	vers=$(sonos -v)
+	reponse=""
+	last_tag=""
+	if [ -n "$GITHUB_TOKEN" ]; then
+		GITHUB_API_HEADER_ACCEPT="Accept: application/vnd.github.v3+json"
+		GITHUB_API_REST="/repos/avantrec/soco-cli/tags"
+		reponse=$(curl -H "${GITHUB_API_HEADER_ACCEPT}" -H "Authorization: token $GITHUB_TOKEN" -s "https://api.github.com${GITHUB_API_REST}")
+	fi
+	[ -n "$reponse" ] && last_tag=$(echo $reponse | jq '.[0] | (.name)') || last_tag="-"
+
 	clear
 	echo ""
-	echo -e "\033[1mAbout:\033[0m"
+	echo -e "${bold}About:${reset}"
 	echo ""
-	echo "            #####             #####                     ####      ####                                 ## ";
-	echo "           ##   ##           ##   ##                     ##        ## ";
-	echo "   #####   ##   ##   ####    ##   ##            ####     ##        ##               ### ##  ##  ##    ### ";
-	echo "  ##       ##   ##  ##  ##   ##   ##  ######   ##  ##    ##        ##              ##  ##   ##  ##     ## ";
-	echo "   #####   ##   ##  ##       ##   ##           ##        ##   #    ##              ##  ##   ##  ##     ## ";
-	echo "       ##  ##   ##  ##  ##   ##   ##           ##  ##    ##  ##    ##               #####   ##  ##     ## ";
-	echo "  ######    #####    ####     #####             ####    #######   ####                 ##    ######   #### ";
-	echo "                                                                                   ##### ";
+	echo -e "${bold}            #####             #####                     ####      ####                                 ## ${reset}"
+	echo -e "${bold}           ##   ##           ##   ##                     ##        ## ${reset}"
+	echo -e "${bold}   #####   ##   ##   ####    ##   ##            ####     ##        ##               ### ##  ##  ##    ### ${reset}"
+	echo -e "${bold}  ##       ##   ##  ##  ##   ##   ##  ######   ##  ##    ##        ##              ##  ##   ##  ##     ## ${reset}"
+	echo -e "${bold}   #####   ##   ##  ##       ##   ##           ##        ##   #    ##              ##  ##   ##  ##     ## ${reset}"
+	echo -e "${bold}       ##  ##   ##  ##  ##   ##   ##           ##  ##    ##  ##    ##               #####   ##  ##     ## ${reset}"
+	echo -e "${bold}  ######    #####    ####     #####             ####    #######   ####                 ##    ######   #### ${reset}"
+	echo -e "${bold}                                                                                   ##### ${reset}"
 	echo ""
 	echo "Just a GUI for the wonderful tool SoCo-Cli"
 	echo ""
 	echo "https://github.com/avantrec/soco-cli"
 	echo ""
+	echo "To install / upgrade soco-cli: pip3 install -U soco-cli (last tag: $last_tag)"
+	
+	echo -e "\n$vers\n"
 	echo "<Press Enter to quit>"
 	}
 
@@ -96,7 +111,7 @@ about() {
 help() {
 	clear
 	echo ""
-	echo -e "\033[1;4mHelp:\033[0m"
+	echo -e "${bold_under}Help:${reset}"
 
 	echo -e "\n${bold}Main Menu:${reset}"
 			
@@ -202,7 +217,7 @@ soco() {
 	do
 		clear
         echo -e ""
-        echo -e "\033[1m 🔊 Sonos $device \033[0m"
+        echo -e "${bold} 🔊 Sonos $device ${reset}"
         echo -e ""
 		echo -e " "
 		echo -e "------------------------|-------------------------|--------------------"
@@ -261,112 +276,112 @@ soco() {
 option_1() {
 	#echo "$loc"
 	playing="Playing France Info..."
-	echo -e "\n\033[1m $playing \033[0m"
+	echo -e "\n${bold} $playing ${reset}"
 	sonos $loc $device play_fav 'franceinfo' && sleep 2
 	}
 
 # Playing France Inter
 option_2() {
 	playing="Playing France Inter..."
-	echo -e "\n\033[1m $playing \033[0m"
+	echo -e "\n${bold} $playing ${reset}"
 	sonos $loc $device play_fav 'france inter' && sleep 2
 	}
 
 # Playing K6 FM
 option_3() {
 	playing="Playing K6 FM..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device play_fav 'K6 FM' && sleep 2
 	}
 
 # Playing Rires et Chansons
 option_4() {
 	playing="Playing Rires et Chansons..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device play_fav 'Rire et Chansons' && sleep 2
 	}
 
 # Playing RTL
 option_5() {
 	playing="Playing RTL..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
 	sonos $loc $device play_fav 'RTL' && sleep 2
 	}
 
 # Playing Deezer Flow
 option_6() {
 	playing="Playing Deezer Flow..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device play_fav 'Flow'
 	}
 
 # Set volume to level 11
 option_11() {
 	#playing="Playing Deezer Flow..."
-    echo -e "\n\033[1m Set volume to level 11... \033[0m"
+    echo -e "\n${bold} Set volume to level 11... ${reset}"
     sonos $loc $device volume 11 && sleep 2
 	}
 
 # Mute ON
 option_12() {
 	playing="Mute ON..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device mute on && sleep 2
 	}
 
 # Set volume to level 13
 option_13() {
 	#playing="Start $device..."
-    echo -e "\n\033[1m Set volume to level 13... \033[0m"
+    echo -e "\n${bold} Set volume to level 13... ${reset}"
     sonos $loc $device volume 13 && sleep 2
 	}
 
 # Mute OFF
 option_14() {
 	playing=""
-    echo -e "\n\033[1m Mute OFF... \033[0m"
+    echo -e "\n${bold} Mute OFF... ${reset}"
     sonos $loc $device mute off && sleep 2
 	}
 
 # Set volume to level 15
 option_15() {
 	#playing="Stop $device..."
-    echo -e "\n\033[1m Set volume to level 15... \033[0m"
+    echo -e "\n${bold} Set volume to level 15... ${reset}"
     sonos $loc $device volume 15 && sleep 2
 	}
 
 # Start $device
 option_16() {
 	playing="Start $device..."	# <= Shazaaam
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device start && sleep 2
 	}
 
 # Stop $device
 option_17() {
 	playing="Stop $device..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device stop && sleep 2
 	}
 
 # Pause $device
 option_18() {
 	playing="Pause $device..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device pause && sleep 2
 	}
 
 # Previous tracks
 option_19() {
 	#playing="Start $device..."	# <= Shazaaam
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device previous && sleep 2
 	}
 
 # Next tracks
 option_20() {
 	#playing="Stop $device..."	# <= Shazaaam
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device next && sleep 2
 	}
 
@@ -399,7 +414,7 @@ play_track_from_library() {
 
 # Help
 help_soco() {
-	echo -e "\n\033[1m Help... \033[0m\n"
+	echo -e "\n${bold} Help... ${reset}\n"
 	echo -e "Play albums:"
 	echo -e "Play artists:"
 	echo -e "Play tracks:"
@@ -411,7 +426,7 @@ help_soco() {
 # Sleep timer
 sleeep() {
 	playing="Set sleep timer..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
   
 	status=$(sonos $loc $device status)
 	if [[ "$status" != "STOPPED" ]]; then
@@ -448,7 +463,7 @@ sleeep() {
 # Cancel timer
 sleeep_3() {
 	clear
-	echo -e "\n\033[1m Cancel timer... \033[0m\n"
+	echo -e "\n${bold} Cancel timer... ${reset}\n"
 	secs=$(sonos $loc $device sleep_timer)
 	 
 	if [ $secs -ne 0 ]; then
@@ -528,7 +543,7 @@ sleeep_1() {
 
 # Shazaaaam
 option_27() {
-    echo -e "\n\033[1m Shazaaaam... \033[0m"
+    echo -e "\n${bold} Shazaaaam... ${reset}"
     shazam
 	}
 
@@ -556,9 +571,9 @@ shazam() {
 	else radio=""; fi
 	
 	if [ -n "$radio" ]; then
-		shazam="\033[1mOn air\033[0m: \033[3m$radio\033[0m"
+		shazam="${bold}On air${reset}: \033[3m$radio${reset}"
 	else
-		shazam="\033[1mOn air\033[0m: \033[1m$title\033[0m \033[3mfrom\033[0m $album \033[3mof\033[0m $artist"
+		shazam="${bold}On air${reset}: ${bold}$title${reset} \033[3mfrom${reset} $album \033[3mof${reset} $artist"
 	fi
 	
 	echo -e "\n $shazam \n"
@@ -569,7 +584,7 @@ shazam() {
 # Switch status light
 led() {
 	playing="Switch status light..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
 
 	led=$(sonos $loc $device status_light)
 	echo -e "Status light is ${bold}$led${reset}"
@@ -602,7 +617,7 @@ soco_lists() {
 	do
 		clear
         echo -e ""
-        echo -e "\033[1m 🔊 Sonos lists $device \033[0m"
+        echo -e "${bold} 🔊 Sonos lists $device ${reset}"
         echo -e ""
 		echo -e " "
 		echo -e "------------------------------------------------------------------------------"
@@ -647,7 +662,7 @@ soco_lists() {
 
 # Favourite radio stations
 list_1() {
-    echo -e "\n\033[1m Favourite radio stations... \033[0m"
+    echo -e "\n${bold} Favourite radio stations... ${reset}"
     s=$(sonos $loc $device favourite_radio_stations)
     echo -e "\n $s \n"
     read -p "< Press Enter>"
@@ -655,7 +670,7 @@ list_1() {
 
 # Favourites
 list_2() {
-    echo -e "\n\033[1m Favourites... \033[0m"
+    echo -e "\n${bold} Favourites... ${reset}"
     f=$(sonos $loc $device list_favs)
     echo -e "\n $f \n"
     read -p "< Press Enter>"
@@ -663,7 +678,7 @@ list_2() {
 
 # Queue
 list_3() {
-    echo -e "\n\033[1m Queue... \033[0m"
+    echo -e "\n${bold} Queue... ${reset}"
     q=$(sonos $loc $device list_queue)
     echo -e "\n $q \n"
     read -p "< Press Enter>"
@@ -671,7 +686,7 @@ list_3() {
 
 # Remove from queue
 list_4() {
-    echo -e "\n\033[1m Remove from queue... \033[0m"
+    echo -e "\n${bold} Remove from queue... ${reset}"
 
 	l=$(sonos $loc $device queue_length)
 	if [ $l -ne 0 ]; then
@@ -691,7 +706,7 @@ list_4() {
 
 # Clear queue
 list_5() {
-    echo -e "\n\033[1m Clear queue... \033[0m"
+    echo -e "\n${bold} Clear queue... ${reset}"
     sonos $loc $device clear_queue
     q=$(sonos $loc $device queue_length)
     if [ $q -eq 0 ]; then echo "Queue is empty"; else echo "Queue is not empty"; fi
@@ -700,7 +715,7 @@ list_5() {
 
 # List Artists
 list_7() {
-    echo -e "\n\033[1m List artists... \033[0m"
+    echo -e "\n${bold} List artists... ${reset}"
     a=$(sonos $loc $device list_artists | more)
     echo -e "\n $a \n"
     read -p "< Press Enter>"
@@ -708,7 +723,7 @@ list_7() {
 
 # Lists Albums
 list_8() {
-    echo -e "\n\033[1m List albums... \033[0m"
+    echo -e "\n${bold} List albums... ${reset}"
     b=$(sonos $loc $device list_albums | more)
     echo -e "\n $b \n"
     read -p "< Press Enter>"
@@ -716,7 +731,7 @@ list_8() {
 
 # Create Sonos playlist
 list_11() {
-    echo -e "\n\033[1m Create Sonos playlist... \033[0m"
+    echo -e "\n${bold} Create Sonos playlist... ${reset}"
     echo -e "\n"
     read -p "Input a name for playlist: " name
    	sonos $loc $device create_playlist "$name"
@@ -724,7 +739,7 @@ list_11() {
 
 #list_playlists
 list_12() {
-	 echo -e "\n\033[1m List Sonos playlist... \033[0m"
+	 echo -e "\n${bold} List Sonos playlist... ${reset}"
 	l=$(sonos $loc $device list_playlists)
     echo -e "\n $l \n"
     read -p "< Press Enter>"
@@ -732,7 +747,7 @@ list_12() {
 
 #delete_playlist
 list_13() {
-	 echo -e "\n\033[1m Delete Sonos playlist... \033[0m"
+	 echo -e "\n${bold} Delete Sonos playlist... ${reset}"
 	 
     while :
 	do
@@ -746,7 +761,7 @@ list_13() {
 
 # List tracks in all Sonos Playlists
 list_14() {
-    echo -e "\n\033[1m List tracks in all Sonos Playlists... \033[0m"
+    echo -e "\n${bold} List tracks in all Sonos Playlists... ${reset}"
    	c=$(sonos $loc $device list_all_playlist_tracks)
     echo -e "\n $c \n"
     read -p "< Press Enter>"
@@ -755,7 +770,7 @@ list_14() {
 # Add a Sonos playlist to queue
 list_15() {
 	playing="Add Sonos playlist to queue..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
 
 	echo -e "\nList of Sonos playlist:"
 	sonos $loc $device list_playlists
@@ -768,7 +783,7 @@ list_15() {
 # Remove a track from a Sonos playlist
 list_16() {
 	playing="Remove a track from a Sonos playlist..."
-    echo -e "\n\033[1m $playing \033[0m"
+    echo -e "\n${bold} $playing ${reset}"
 
     while :
 	do
@@ -798,7 +813,7 @@ soco_infos() {
 	do
 		clear
         echo -e ""
-        echo -e "\033[1m 🔊 Sonos $device infos \033[0m"
+        echo -e "${bold} 🔊 Sonos $device infos ${reset}"
         echo -e ""
 		echo -e " "
 		echo -e "--------------------------------"
@@ -837,7 +852,7 @@ soco_infos() {
 
 # Alarms
 info_1() {
-    echo -e "\n\033[1m Alarms... \033[0m"
+    echo -e "\n${bold} Alarms... ${reset}"
     a=$(sonos $loc $device alarms)
     echo -e "\n $a \n"
     read -p "< Press Enter>"
@@ -845,7 +860,7 @@ info_1() {
 
 # Groups
 info_2() {
-    echo -e "\n\033[1m Groups... \033[0m"
+    echo -e "\n${bold} Groups... ${reset}"
     g=$(sonos $loc $device groups)
 	echo -e "\n $g \n"
     read -p "< Press Enter>"
@@ -859,7 +874,7 @@ info_3() {
 
 # Shares
 info_4() {
-    echo -e "\n\033[1m Shares... \033[0m"
+    echo -e "\n${bold} Shares... ${reset}"
     s=$(sonos $loc $device shares)
     echo -e "\n $s \n"
     read -p "< Press Enter>"
@@ -867,7 +882,7 @@ info_4() {
 
 # Reindex
 info_5() {
-    echo -e "\n\033[1m Reindex shares... \033[0m"
+    echo -e "\n${bold} Reindex shares... ${reset}"
     y=$(sonos $loc $device reindex)
     echo -e "\n $y \n"
     read -p "< Press Enter>"
@@ -875,7 +890,7 @@ info_5() {
 
 # Sysinfo
 info_6() {
-    echo -e "\n\033[1m Sysinfo... \033[0m"
+    echo -e "\n${bold} Sysinfo... ${reset}"
     s=$(sonos $loc $device sysinfo)
     echo -e "\n $s \n"
     read -p "< Press Enter>"
@@ -883,7 +898,7 @@ info_6() {
 
 # All Zones (rooms)
 info_7() {
-    echo -e "\n\033[1m All Zones... \033[0m"
+    echo -e "\n${bold} All Zones... ${reset}"
     z=$(sonos $loc $device all_zones)
     echo -e "\n $z \n"
     read -p "< Press Enter>"
@@ -891,7 +906,7 @@ info_7() {
 
 # Refreshing the Local Speaker List
 info_8() {
-    echo -e "\n\033[1m Refreshing the Local Speaker List... \033[0m"
+    echo -e "\n${bold} Refreshing the Local Speaker List... ${reset}"
     r=$(sonos -lr $device groups)
     echo -e "\n $r \n"
     read -p "< Press Enter>"
@@ -905,7 +920,7 @@ all() {
 	do
 		clear
         echo -e ""
-        echo -e "\033[1m 🔊 Sonos All devices \033[0m"
+        echo -e "${bold} 🔊 Sonos All devices ${reset}"
         echo -e ""
         echo -e "Below commands apply to all Sonos devices in the network."
 		echo -e ""
@@ -944,7 +959,7 @@ all() {
 # Switch OFF status light
 all_1() {
 	cde="Switch OFF status light on All devices..."
-    echo -e "\n\033[1m $cde \033[0m"
+    echo -e "\n${bold} $cde ${reset}"
 
 	sleep 0.5
 	saslof=$(sonos _all_ status_light off | tr '\n' ' ' | xargs)
@@ -957,7 +972,7 @@ all_1() {
 # Switch ON status light
 all_2() {
 	cde="Switch ON status light on All devices..."
-    echo -e "\n\033[1m $cde \033[0m"
+    echo -e "\n${bold} $cde ${reset}"
 
 	sleep 0.5
 	saslon=$(sonos _all_ status_light on | tr '\n' ' ' | xargs)
@@ -970,7 +985,7 @@ all_2() {
 # Mute ON 
 all_3() {
 	cde="Mute ON All devices..."
-    echo -e "\n\033[1m $cde \033[0m"
+    echo -e "\n${bold} $cde ${reset}"
 
 	sleep 0.5
 	saslon=$(sonos _all_ mute on | tr '\n' ' ' | xargs)
@@ -983,7 +998,7 @@ all_3() {
 # Mute OFF 
 all_4() {
 	cde="Mute OFF All devices..."
-    echo -e "\n\033[1m $cde \033[0m"
+    echo -e "\n${bold} $cde ${reset}"
 
 	sleep 0.5
 	saslon=$(sonos _all_ mute off | tr '\n' ' ' | xargs)
