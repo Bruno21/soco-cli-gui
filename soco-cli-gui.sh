@@ -18,6 +18,7 @@ GITHUB_TOKEN=13314ba0099450eaa6c0b2233d0f6adde1f5c718
 
 discover=$(sonos-discover -p)
 dev=$(echo "$discover" | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
+nbdevices=$(echo "$discover" | grep "Sonos device(s) found" | awk '{print $1}')
 
 italic="\033[3m"
 underline="\033[4m"
@@ -141,20 +142,22 @@ help() {
 			
 	echo -e "  ${italic}1) About:${reset} about page"
 	echo -e "  ${italic}2) Help:${reset} this page"
-	echo -e "  Next (3-4), add your Sonos device. Each call the main function soco()"
-	echo -e "  ${italic}3) ➔ Chambre:${reset} 'Chambre' device"
-	echo -e "  ${italic}4) ➔ Salon:${reset} 'Salon' device"
-	echo -e "  ${italic}5) ➔ All:${reset} command all your device"	
-	echo -e "  ${italic}6) Quit:${reset} quit the app" 
+	u=$((3+nbdevices-1))
+	#echo "$u"
+	echo -e "  Next (3-$u), all your Sonos device are automatically discover. Each call the main function soco()"
+	echo -e "  ${italic}3-$u) ➔ Sonos <model> device <Name>:${reset} Command your <Name> device"
+	#echo -e "  Last,  device"
+	echo -e "  ${italic}$((u+1))) ➔ All devices:${reset} command all your device together"	
+	echo -e "  ${italic}$((u+2))) Quit:${reset} quit the app" 
 
 	echo -e "\n${bold}Sonos <$device> Menu:${reset}"
 
-	echo -e " ${italic}[1-10] Play favorites${reset}       "
-	echo -e " ${italic}11) volume 11:${reset}        "
+	echo -e " ${italic}[1-10] Play favorites:${reset} edit and duplicate functions option_1 to option_10 to add your favs"
+	echo -e " ${italic}11) volume 11:${reset} set volume to level 11"
 	echo -e " ${italic}12) mute ON:${reset}          "
-	echo -e " ${italic}13) volume 13:${reset}        "
+	echo -e " ${italic}13) volume 13:${reset} set volume to level 13"
 	echo -e " ${italic}14) mute OFF:${reset}        "
-	echo -e " ${italic}15) volume 15:${reset}        "
+	echo -e " ${italic}15) volume 15:${reset} set volume to level 15"
 	echo -e " ${italic}16) start <$device>:${reset}      "
 	echo -e " ${italic}17) stop <$device>:${reset}       "
 	echo -e " ${italic}18) pause on $device>:${reset}   "
@@ -184,8 +187,8 @@ help() {
 	echo -e " ${italic}1) Favourite radio stations:${reset} "
 	echo -e " ${italic}2) Favourites:${reset}               "
 	echo -e " ${italic}3) Queue:${reset}                   "
-	echo -e " ${italic}4) List artists:${reset}             "
-	echo -e " ${italic}5) List albums:${reset}              "
+	echo -e " ${italic}4) List artists:${reset} list artists on library"
+	echo -e " ${italic}5) List albums:${reset} list albums on library"
 	echo -e " ${italic}8) Remove from queue:${reset}        "
 	echo -e " ${italic}9) Clear queue:${reset}              "
 	echo -e " ${italic}11) Create Sonos playlist:${reset}               "
@@ -237,6 +240,9 @@ soco() {
 	playing=""
 	device="$1"
 	
+	sp="            "
+	device12="${device:0:12}${sp:0:$((12 - ${#device}))}"
+	
 	while :
 	do
 		clear
@@ -244,20 +250,20 @@ soco() {
         echo -e "${bold} 🔊 Sonos $device ${reset}"
         echo -e ""
 		echo -e " "
-		echo -e "------------------------|-------------------------|--------------------"
-		echo -e "                    Sonos $device Menu : $playing                                "
-		echo -e "------------------------|-------------------------|--------------------"
-		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}         " " | " "21) ➔ ${bgd}I${reset}nfos     "
-		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON           " " | " "22) ➔ ${bgd}L${reset}ists     "
-		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}         " " | " "23) Play al${bgd}b${reset}ums               "
-		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF          " " | " "24) Play artists (${bgd}x${reset}) "
-		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}         " " | " "25) Play tracks (${bgd}y${reset})  "
-		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) ${bgd}s${reset}tart $device      " " | " "26) Sleeep (${bgd}j${reset})      "
-		echo -e " 7)                   " " | " "17) s${bgd}t${reset}op $device       " " | " "27) Sha${bgd}z${reset}aaaam        "
-		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device   " " | " "28) S${bgd}w${reset}itch Status Light    "
-		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device    " " | " "29)         "
-		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device    " " | " "30) ➔ ${bgd}A${reset}ccueil     "
-		echo -e "========================================================================"
+		echo -e "------------------------|--------------------------------|-------------------------"
+		echo -e "                    Sonos $device Menu : $playing                                  "
+		echo -e "------------------------|--------------------------------|-------------------------"
+		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}               " " | " "21) ➔ ${bgd}I${reset}nfos     "
+		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON                 " " | " "22) ➔ ${bgd}L${reset}ists     "
+		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}               " " | " "23) Play al${bgd}b${reset}ums               "
+		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF                " " | " "24) Play artists (${bgd}x${reset}) "
+		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}               " " | " "25) Play tracks (${bgd}y${reset})  "
+		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) ${bgd}s${reset}tart $device12      " " | " "26) Sleeep (${bgd}j${reset})      "
+		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) s${bgd}t${reset}op $device12       " " | " "27) Sha${bgd}z${reset}aaaam        "
+		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "28) S${bgd}w${reset}itch Status Light    "
+		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "29)         "
+		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "30) ➔ ${bgd}A${reset}ccueil     "
+		echo -e "==================================================================================="
 		echo -e "Enter your menu choice [1-30]: \c "
 		read soco_menu
 	
@@ -269,6 +275,7 @@ soco() {
 			4|c|C) option_4;;
 			5|r|R) option_5;;
 			6|d|D) option_6;;
+			7) option_7;;
 			11) option_11;;
 			12|m|M) option_12;;
 			13) option_13;;
@@ -336,7 +343,14 @@ option_5() {
 option_6() {
 	playing="Playing Deezer Flow..."
     echo -e "\n${bold} $playing ${reset}"
-    sonos $loc $device play_fav 'Flow'
+    sonos $loc $device play_fav 'Flow' && sleep 2
+	}
+
+# Playing ...
+option_7() {
+	playing="Playing..."
+    echo -e "\n${bold} $playing ${reset}"
+    #sonos $loc $device play_fav '<favori>' && sleep 2
 	}
 
 # Set volume to level 11
