@@ -12,9 +12,12 @@ set -u
 list="local"
 if [ "$list" = "discovery" ]; then loc="";
 else loc=" -l"; fi
-echo "$loc"	
+#echo "$loc"	
 #sleep 3
 GITHUB_TOKEN=13314ba0099450eaa6c0b2233d0f6adde1f5c718
+
+discover=$(sonos-discover -p)
+dev=$(echo "$discover" | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 
 italic="\033[3m"
 underline="\033[4m"
@@ -40,35 +43,55 @@ main() {
 		echo -e ""
 		echo -e "${bold} 🔈 SoCo-Cli GUI${reset}"
 		echo -e ""
-
 		echo -e " "
 		echo -e "---------------------------------"
 		echo -e "               Main Menu         "
 		echo -e "---------------------------------"
 		echo -e " 1) ${bgd}A${reset}bout          "
 		echo -e " 2) ${bgd}H${reset}elp           "
-		echo -e " 3) ➔ ${bgd}C${reset}hambre      "
-		echo -e " 4) ➔ ${bgd}S${reset}alon        "
-		echo -e " 5) ➔ A${bgd}l${reset}l devices  "
-		echo -e " 6) ${bgd}Q${reset}uit           " 
-		echo -e "================================="
-		echo -e "Enter your menu choice [1-6]: \c "
 		
-		read main_menu
-	
-		case "$main_menu" in
+		j=3
+		while IFS= read -r line; do
+			name=$(echo "${line}" | awk '{print $1}')
+			model=$(echo "${line}" | awk '{print $3}')
 
-			1|a|A) about
-				   read -p ""
-				   ;;
-			2|h|H) help;;
-			3|c|C) soco "Chambre";;
-			4|s|S) soco "Salon";;
-			5|l|L) all;;
-			6|q|Q) exit 0;;
-			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
-			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
-		esac
+			echo -e " $j) ➔ Sonos $model device: $name        "
+			((j++))
+		done <<< "$dev"
+
+		l=$j		# All devices entrie
+		k=$((j+1))	# Quit entrie
+
+		echo -e " $j) ➔ A${bgd}l${reset}l devices  "
+		echo -e " $k) ${bgd}Q${reset}uit           " 
+		echo -e "================================="
+		echo -e "Enter your menu choice [1-$k]: \c "
+
+		read main_menu
+		
+
+		if [ $main_menu == "3" ] || [ $main_menu == "4" ]; then
+			
+			nth=$(($main_menu - 2))
+			nth_device=$(echo "$dev" | sed -n "${nth}p")
+			name=$(echo "${nth_device}" | awk '{print $1}')
+			
+			soco $name
+			
+		elif [ $main_menu == "1" ] || [[ $main_menu == "a" ]] || [[ $main_menu == "A" ]]; then
+			about
+		elif [ $main_menu == "2" ] || [[ $main_menu == "h" ]] || [[ $main_menu == "H" ]]; then
+			help
+		elif [ $main_menu == "$j" ] || [[ $main_menu == "l" ]] || [[ $main_menu == "L" ]]; then
+			all
+		elif [ $main_menu == "$k" ] || [[ $main_menu == "q" ]] || [[ $main_menu == "Q" ]]; then
+			exit 0
+		else
+			echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
+			echo -e "Press ${bold}ENTER${reset} To Continue..." ;
+			read -p ""
+		fi
+
 	done
 	}
 
@@ -105,6 +128,7 @@ about() {
 	
 	echo -e "\n$vers\n"
 	echo "<Press Enter to quit>"
+	read -p ""
 	}
 
 	
@@ -223,11 +247,11 @@ soco() {
 		echo -e "------------------------|-------------------------|--------------------"
 		echo -e "                    Sonos $device Menu : $playing                                "
 		echo -e "------------------------|-------------------------|--------------------"
-		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}        " " | " "21) ➔ ${bgd}I${reset}nfos     "
-		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON          " " | " "22) ➔ ${bgd}L${reset}ists     "
-		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}        " " | " "23) Play al${bgd}b${reset}ums               "
-		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF         " " | " "24) Play artists (${bgd}x${reset}) "
-		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}        " " | " "25) Play tracks (${bgd}y${reset})  "
+		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}         " " | " "21) ➔ ${bgd}I${reset}nfos     "
+		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON           " " | " "22) ➔ ${bgd}L${reset}ists     "
+		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}         " " | " "23) Play al${bgd}b${reset}ums               "
+		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF          " " | " "24) Play artists (${bgd}x${reset}) "
+		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}         " " | " "25) Play tracks (${bgd}y${reset})  "
 		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) ${bgd}s${reset}tart $device      " " | " "26) Sleeep (${bgd}j${reset})      "
 		echo -e " 7)                   " " | " "17) s${bgd}t${reset}op $device       " " | " "27) Sha${bgd}z${reset}aaaam        "
 		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device   " " | " "28) S${bgd}w${reset}itch Status Light    "
