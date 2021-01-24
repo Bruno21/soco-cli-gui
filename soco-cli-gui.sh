@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 #set -e
-set -u
+#set -u
 #set -o pipefail
 
 #\033[background;style;color]
@@ -20,6 +20,10 @@ discover=$(sonos-discover -p)
 dev=$(echo "$discover" | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 nbdevices=$(echo "$discover" | grep "Sonos device(s) found" | awk '{print $1}')
 
+#dev=$(cat dev.txt)
+#nbdevices=$(echo "$dev" | wc -l | xargs)
+#echo "$dev \n $nbdevices"
+
 italic="\033[3m"
 underline="\033[4m"
 bgd="\033[1;4;31m"
@@ -28,6 +32,7 @@ bold="\033[1m"
 bold_under="\033[1;4m"
 reset="\033[0m"
 
+function is_int() { test "$@" -eq "$@" 2> /dev/null; } 
 
 # Main Menu
 
@@ -55,12 +60,16 @@ main() {
 		while IFS= read -r line; do
 			name=$(echo "${line}" | awk '{print $1}')
 			model=$(echo "${line}" | awk '{print $3}')
-
-			echo -e " $j) ➔ Sonos $model device: $name        "
+			
+			sc=${name:0:1}
+			last=${name:1}
+			echo -e " $j) ➔ Sonos $model device: ${bgd}$sc${reset}$last"
+			
+			#echo -e " $j) ➔ Sonos $model device: $name        "
 			((j++))
 		done <<< "$dev"
 
-		l=$j		# All devices entrie
+		l=$j		# All devices entries
 		k=$((j+1))	# Quit entrie
 
 		echo -e " $j) ➔ A${bgd}l${reset}l devices  "
@@ -71,7 +80,43 @@ main() {
 		read main_menu
 		
 
-		if [ $main_menu == "3" ] || [ $main_menu == "4" ]; then
+		for i in {3..4}
+		do
+			
+			if is_int "$main_menu"; then
+				nth=$(($main_menu - 2))
+				nth_device=$(echo "$dev" | sed -n "${nth}p")
+				name=$(echo "${nth_device}" | awk '{print $1}')
+				sc=${name:0:1}
+				#echo -en "\007"
+			else
+				d=$(echo "$dev" | awk '{print $1}')
+				sc=${main_menu^}	# Capitalize
+				sc=${sc:0:1}		# First letter
+				#echo "-$sc-"
+				# tr [a-z] [A-Z
+				name=$(echo "$d" | grep -E ^$sc)	# shortcut = first letter of a device
+				#echo "-$name-"
+				#echo -en "\007"
+			fi
+			
+			#echo "$nth - $nth_device - $name"
+			# 1 - Chambre           192.168.2.232  One             Visible       12.2.2 - Chambre
+			#read -p ""
+			
+			#if [ $main_menu == "$i" ] || [ $main_menu == "$sc" ]; then
+			if [ $main_menu == "$i" ] || [ -n "$name" ]; then
+				#nth=$(($main_menu - 2))
+				#nth_device=$(echo "$dev" | sed -n "${nth}p")
+				#name=$(echo "${nth_device}" | awk '{print $1}')
+			
+				soco $name
+			
+			fi
+		done
+		#read -p ""
+		
+		if [ $main_menu == "13" ] || [ $main_menu == "14" ]; then
 			
 			nth=$(($main_menu - 2))
 			nth_device=$(echo "$dev" | sed -n "${nth}p")
@@ -253,18 +298,23 @@ soco() {
 		echo -e "------------------------|--------------------------------|-------------------------"
 		echo -e "                    Sonos $device Menu : $playing                                  "
 		echo -e "------------------------|--------------------------------|-------------------------"
-		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}               " " | " "21) ➔ ${bgd}I${reset}nfos     "
-		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON                 " " | " "22) ➔ ${bgd}L${reset}ists     "
-		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}               " " | " "23) Play al${bgd}b${reset}ums               "
-		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF                " " | " "24) Play artists (${bgd}x${reset}) "
-		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}               " " | " "25) Play tracks (${bgd}y${reset})  "
-		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) ${bgd}s${reset}tart $device12      " " | " "26) Sleeep (${bgd}j${reset})      "
-		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) s${bgd}t${reset}op $device12       " " | " "27) Sha${bgd}z${reset}aaaam        "
-		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "28) S${bgd}w${reset}itch Status Light    "
-		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "29)         "
-		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "30) ➔ ${bgd}A${reset}ccueil     "
+		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}               " " | " "26) ➔ ${bgd}I${reset}nfos     "
+		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON                 " " | " "27) ➔ ${bgd}L${reset}ists     "
+		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}               " " | " "28) Play al${bgd}b${reset}ums               "
+		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF                " " | " "29) Play artists (${bgd}x${reset}) "
+		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}               " " | " "30) Play tracks (${bgd}y${reset})  "
+		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) volume ${bgd}+${reset}                " " | " "31) Sleeep (${bgd}j${reset})      "
+		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) volume ${bgd}-${reset}                " " | " "32) Sha${bgd}z${reset}aaaam        "
+		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "33) S${bgd}w${reset}itch Status Light    "
+		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "34)     "
+		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35)     "
+		echo -e "                      " " | " "21) ${bgd}s${reset}tart $device12      " " | " "36)     "
+		echo -e "                      " " | " "22) s${bgd}t${reset}op $device12       " " | " "37)     "
+		echo -e "                      " " | " "23)                         " " | " "38)     "
+		echo -e "                      " " | " "24)                         " " | " "39)     "
+		echo -e "                      " " | " "25)                         " " | " "40) ➔ ${bgd}H${reset}ome     "
 		echo -e "==================================================================================="
-		echo -e "Enter your menu choice [1-30]: \c "
+		echo -e "Enter your menu choice [1-40]: \c "
 		read soco_menu
 	
 		case "$soco_menu" in
@@ -281,21 +331,22 @@ soco() {
 			13) option_13;;
 			14|u|U) option_14;;
 			15) option_15;;
-			16|s|S) option_16;;
-			17|t|T) option_17;;
-			18|o|O) option_18;;
-			19|p|P) option_19;;
-			20|n|N) option_20;;
-			21|i|I) soco_infos $device;;
-			22|l|L) soco_lists $device;;
-			23|b|B) play_album_from_library;;
-			24|x|X) play_artist_from_library;;
-			25|y|Y) play_track_from_library;;
-			26|j|J) sleeep;;
-			27|z|Z) option_27;;
-			28|w|W) led;;
-			#29|h|H) help_soco;;
-			30|a|A) exec "$0";;
+			16|+) vol_+;;
+			17|-) vol_-;;
+			18|s|S) option_16;;
+			19|t|T) option_17;;
+			20|o|O) option_18;;
+			21|p|P) option_19;;
+			22|n|N) option_20;;
+			26|i|I) soco_infos $device;;
+			27|l|L) soco_lists $device;;
+			28|b|B) play_album_from_library;;
+			29|x|X) play_artist_from_library;;
+			30|y|Y) play_track_from_library;;
+			31|j|J) sleeep;;
+			32|z|Z) option_27;;
+			33|w|W) led;;
+			40|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
 		esac
@@ -421,6 +472,24 @@ option_20() {
 	#playing="Stop $device..."	# <= Shazaaam
     echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device next && sleep 2
+	}
+
+vol_+() {
+	#playing="Volume +..."
+    #echo -e "\n${bold} $playing ${reset}"
+    volume=$(sonos $loc $device volume)
+    vol=$((volume+1))
+    sonos $loc $device volume $vol
+    echo -e "\nSet volume to ${bold}level $vol${reset}" && sleep 0.5
+	}
+
+vol_-() {
+	#playing="Volume -..."
+    #echo -e "\n${bold} $playing ${reset}"
+    volume=$(sonos $loc $device volume)
+    vol=$((volume-1))
+    sonos $loc $device volume $vol
+    echo -e "\nSet volume to ${bold}level $vol${reset}" && sleep 0.5
 	}
 
 # Search artist in library -> add album to queue -> play it
@@ -666,11 +735,11 @@ soco_lists() {
 		echo -e " 3) ${bgd}Q${reset}ueue                    " " | " " 13) D${bgd}e${reset}lete playlists                    " " | "
 		echo -e " 4) Re${bgd}m${reset}ove from queue        " " | " " 14) ${bgd}L${reset}ists tracks in all Sonos Playlists " " | "
 		echo -e " 5) ${bgd}C${reset}lear queue              " " | " " 15) Ad${bgd}d${reset} a Sonos playlist to queue       " " | "
-		echo -e " 6)                          " " | " " 16) Remove a trac${bgd}k${reset} from a Sonos playlist              " " | "
+		echo -e " 6)                          " " | " " 16) Remove a trac${bgd}k${reset} from a Sonos playlist" " | "
 		echo -e " 7) List ${bgd}a${reset}rtists             " " | " " 17)                                     " " | "
 		echo -e " 8) List al${bgd}b${reset}ums              " " | " " 18)                                     " " | "
 		echo -e " 9)                          " " | " " 19)                                     " " | " 
-		echo -e "10)                          " " | " " 20) ${bgd}R${reset}eturn                              " " | "
+		echo -e "10)                          " " | " " 20) ${bgd}H${reset}ome                               " " | "
 		echo -e "=============================================================================="
 		echo -e "Enter your menu choice [1-20]: \c "
 		read lists
@@ -690,7 +759,7 @@ soco_lists() {
 			14|l|L) list_14;;
 			15|d|D) list_15;;
 			16|k|K) list_16;;
-			20|r|R) exec "$0";;
+			20|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
 		esac
@@ -854,20 +923,20 @@ soco_infos() {
         echo -e "${bold} 🔊 Sonos $device infos ${reset}"
         echo -e ""
 		echo -e " "
-		echo -e "--------------------------------"
+		echo -e "-----------------------------------------"
 		echo -e "    Sonos $device infos Menu    "
-		echo -e "--------------------------------"
-		echo -e " 1) ${bgd}A${reset}larms                   " " | " 
-		echo -e " 2) ${bgd}G${reset}roups                   " " | "
-		echo -e " 3) ${bgd}I${reset}nfo                     " " | "
-		echo -e " 4) ${bgd}S${reset}hares                   " " | "
-		echo -e " 5) Reinde${bgd}x${reset} shares           " " | "
-		echo -e " 6) S${bgd}y${reset}sinfo                  " " | "
-		echo -e " 7) All ${bgd}z${reset}ones                " " | "
-		echo -e " 8) Re${bgd}f${reset}reshing the Local Speaker List      " " | "
-		echo -e " 9)                          " " | " 
-		echo -e "10) ${bgd}R${reset}eturn                   " " | "
-		echo -e "================================"
+		echo -e "-----------------------------------------"
+		echo -e " 1) ${bgd}A${reset}larms                            " " | " 
+		echo -e " 2) ${bgd}G${reset}roups                            " " | "
+		echo -e " 3) ${bgd}I${reset}nfo                              " " | "
+		echo -e " 4) ${bgd}S${reset}hares                            " " | "
+		echo -e " 5) Reinde${bgd}x${reset} shares                    " " | "
+		echo -e " 6) S${bgd}y${reset}sinfo                           " " | "
+		echo -e " 7) All ${bgd}z${reset}ones                         " " | "
+		echo -e " 8) Re${bgd}f${reset}reshing the Local Speaker List " " | "
+		echo -e " 9)                                   " " | " 
+		echo -e "10) ${bgd}H${reset}ome                              " " | "
+		echo -e "========================================="
 		echo -e "Enter your menu choice [1-10]: \c "
 		read infos
 	
@@ -881,7 +950,7 @@ soco_infos() {
 			6|y|Y) info_6;;
 			7|z|Z) info_7;;
 			8|f|F) info_8;;
-			10|r|R) exec "$0";;
+			10|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
 		esac
