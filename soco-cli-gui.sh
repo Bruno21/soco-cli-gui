@@ -12,7 +12,7 @@ if [ "$list" = "discovery" ]; then loc="";
 else loc=" -l"; fi
 
 # Needed to get the soco-cli update
-GITHUB_TOKEN=13314ba0099450eaa6c0b2233d0f6adde1f5c718
+GITHUB_TOKEN=add_your_token_here
 
 discover=$(sonos-discover -p)
 dev=$(echo "$discover" | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
@@ -33,10 +33,6 @@ reset="\033[0m"
 function is_int() { test "$@" -eq "$@" 2> /dev/null; } 
 
 # Main Menu
-
-# 'play_fav_radio_station_no'
-# 'play_favourite_number'
-# play_m3u
 
 main() {
 
