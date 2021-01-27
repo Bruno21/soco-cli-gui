@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
 
+# A bash GUI for soco-cli (https://github.com/avantrec/soco-cli/)
+# Apache License 2.0
+
 #set -e
 #set -u
 #set -o pipefail
 
-#\033[background;style;color]
-# background: 40-49,100-107
-# color: 30-39,90-97
-# style: 1 (bold) 2 (light) 4 (underline) 5 (blink) 7 (reverse) 8 (hidden)
-
 list="local"
 if [ "$list" = "discovery" ]; then loc="";
 else loc=" -l"; fi
-#echo "$loc"	
-#sleep 3
+
+# Needed to get the soco-cli update
 GITHUB_TOKEN=13314ba0099450eaa6c0b2233d0f6adde1f5c718
 
 discover=$(sonos-discover -p)
@@ -35,6 +33,10 @@ reset="\033[0m"
 function is_int() { test "$@" -eq "$@" 2> /dev/null; } 
 
 # Main Menu
+
+# 'play_fav_radio_station_no'
+# 'play_favourite_number'
+# play_m3u
 
 main() {
 
@@ -65,7 +67,6 @@ main() {
 			last=${name:1}
 			echo -e " $j) ➔ Sonos $model device: ${bgd}$sc${reset}$last"
 			
-			#echo -e " $j) ➔ Sonos $model device: $name        "
 			((j++))
 		done <<< "$dev"
 
@@ -296,18 +297,18 @@ soco() {
         echo -e ""
 		echo -e " "
 		echo -e "------------------------|--------------------------------|-------------------------"
-		echo -e "                    Sonos $device Menu : $playing                                  "
+		echo -e "                 Sonos $device Menu : $playing                                     "
 		echo -e "------------------------|--------------------------------|-------------------------"
 		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}               " " | " "26) ➔ ${bgd}I${reset}nfos     "
 		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON                 " " | " "27) ➔ ${bgd}L${reset}ists     "
-		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}               " " | " "28) Play al${bgd}b${reset}ums               "
-		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF                " " | " "29) Play artists (${bgd}x${reset}) "
-		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}               " " | " "30) Play tracks (${bgd}y${reset})  "
-		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) volume ${bgd}+${reset}                " " | " "31) Sleeep (${bgd}j${reset})      "
-		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) volume ${bgd}-${reset}                " " | " "32) Sha${bgd}z${reset}aaaam        "
-		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "33) S${bgd}w${reset}itch Status Light    "
-		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "34)     "
-		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35)     "
+		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}               " " | " "28) Pl${bgd}a${reset}y radio from TuneIn               "
+		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF                " " | " "29) Pla${bgd}y${reset} local .m3u playlist               "
+		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}               " " | " "30) Play al${bgd}b${reset}ums               "
+		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) volume ${bgd}+${reset}                " " | " "31) Play artists (${bgd}x${reset}) "
+		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) volume ${bgd}-${reset}                " " | " "32) Play tracks (${bgd}y${reset})  "
+		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "33) Sleeep (${bgd}j${reset})      "
+		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "34) Sha${bgd}z${reset}aaaam        "
+		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35) S${bgd}w${reset}itch Status Light    "
 		echo -e "                      " " | " "21) ${bgd}s${reset}tart $device12      " " | " "36)     "
 		echo -e "                      " " | " "22) s${bgd}t${reset}op $device12       " " | " "37)     "
 		echo -e "                      " " | " "23)                         " " | " "38)     "
@@ -319,6 +320,7 @@ soco() {
 	
 		case "$soco_menu" in
 
+			# Play your favs from 1 to 10
 			1|f|F) option_1;;
 			2|e|E) option_2;;
 			3|k|K) option_3;;
@@ -340,12 +342,14 @@ soco() {
 			22|n|N) option_20;;
 			26|i|I) soco_infos $device;;
 			27|l|L) soco_lists $device;;
-			28|b|B) play_album_from_library;;
-			29|x|X) play_artist_from_library;;
-			30|y|Y) play_track_from_library;;
-			31|j|J) sleeep;;
-			32|z|Z) option_27;;
-			33|w|W) led;;
+			28|a|A) play_radio_from_tunein;;
+			29|y|Y) play_local_m3u;;
+			30|b|B) play_album_from_library;;
+			31|x|X) play_artist_from_library;;
+			32|y|Y) play_track_from_library;;
+			33|j|J) sleeep;;
+			34|z|Z) option_27;;
+			35|w|W) led;;
 			40|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
@@ -353,6 +357,7 @@ soco() {
 	done
 	}
 
+### ADD YOUR FAVS HERE ###
 
 # Playing France Info
 option_1() {
@@ -403,6 +408,9 @@ option_7() {
     echo -e "\n${bold} $playing ${reset}"
     #sonos $loc $device play_fav '<favori>' && sleep 2
 	}
+
+### /ADD YOUR FAVS HERE ###
+
 
 # Set volume to level 11
 option_11() {
@@ -491,6 +499,48 @@ vol_-() {
     sonos $loc $device volume $vol
     echo -e "\nSet volume to ${bold}level $vol${reset}" && sleep 0.5
 	}
+
+# Play favorite from TuneIn radio
+play_radio_from_tunein() {
+	playing="Play a radio from TuneIn..."
+    echo -e "\n${bold} $playing ${reset}"
+
+	list=$(sonos $loc $device favourite_radio_stations)
+	echo -e "$list\n"
+	
+	read -p "Radio to play: " number
+	
+	radio=$(echo "$list" | awk 'NF' | sed "${number}q;d" | awk -F '[0-9]+:' '{print $2}' | xargs)
+	
+	playing="Play $radio from TuneIn..."
+	sonos $loc $device play_fav_radio_station_no $number
+	echo "$playing"
+	}
+
+# Play local .m3u playlist
+play_local_m3u() {
+	playing="Play a local .m3u playlist..."
+    echo -e "\n${bold} $playing ${reset}"
+
+
+	m3u="/Users/bruno/Music/Shaka Ponk - Apelogies/CD1/playlist.m3u"
+	
+	# ${directory////\\/}
+	# sed 's/ /\\ /g'
+	
+	m3u="\/Users\/bruno\/Music\/Shaka\ Ponk\ \-\ Apelogies\/CD1\/playlist.m3u"
+	m3u="/Users/bruno/Music/Shaka\ Ponk\ \-\ Apelogies/CD1/playlist.m3u"
+	m3u="playlist.m3u"
+	plt=$(ls *.m3u*)
+	cd /Users/bruno/Music/Shaka\ Ponk\ -\ Apelogies/CD1
+	read -p "Enter m3u file path: " fp
+	if [ -a "$fp" ]; then
+		cat "$fp"
+		sonos $loc $device play_m3u "$fp"
+	else
+		echo "File doesn't exist!"
+	fi
+}
 
 # Search artist in library -> add album to queue -> play it
 play_artist_from_library() {
