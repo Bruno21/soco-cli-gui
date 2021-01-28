@@ -12,7 +12,8 @@ if [ "$list" = "discovery" ]; then loc="";
 else loc=" -l"; fi
 
 # Needed to get the soco-cli update
-GITHUB_TOKEN=add_your_token_here
+# add_your_token_below
+GITHUB_TOKEN=
 
 discover=$(sonos-discover -p)
 dev=$(echo "$discover" | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
@@ -516,25 +517,26 @@ play_radio_from_tunein() {
 # Play local .m3u playlist
 play_local_m3u() {
 	playing="Play a local .m3u playlist..."
-    echo -e "\n${bold} $playing ${reset}"
+    echo -e "\n${bold} $playing ${reset}\n"
 
-
-	m3u="/Users/bruno/Music/Shaka Ponk - Apelogies/CD1/playlist.m3u"
+	# /Users/bruno/Music/Shaka Ponk - Apelogies/CD1/playlist.m3
 	
 	# ${directory////\\/}
 	# sed 's/ /\\ /g'
 	
-	m3u="\/Users\/bruno\/Music\/Shaka\ Ponk\ \-\ Apelogies\/CD1\/playlist.m3u"
-	m3u="/Users/bruno/Music/Shaka\ Ponk\ \-\ Apelogies/CD1/playlist.m3u"
-	m3u="playlist.m3u"
-	plt=$(ls *.m3u*)
-	cd /Users/bruno/Music/Shaka\ Ponk\ -\ Apelogies/CD1
-	read -p "Enter m3u file path: " fp
+	#plt=$(ls *.m3u*)
+	#cd /Users/bruno/Music/Shaka\ Ponk\ -\ Apelogies/CD1
+	
+	read -e -p "Enter .m3u file path: " fp
+	
+	m3u=$(echo "$fp" | awk -F"/" '{print $NF}')
 	if [ -a "$fp" ]; then
-		cat "$fp"
-		sonos $loc $device play_m3u "$fp"
+		echo -e "\n${underline}$m3u:${reset}"
+		pls=$(cat "$fp")
+		echo -e "\n$pls\n"
+		sonos $loc $device play_m3u "$fp" pi
 	else
-		echo "File doesn't exist!"
+		echo -e "File ${bold}$m3u${reset} doesn't exist!"
 	fi
 }
 
