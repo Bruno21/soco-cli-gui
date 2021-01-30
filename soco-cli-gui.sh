@@ -293,20 +293,20 @@ soco() {
         echo -e "${bold} 🔊 Sonos $device ${reset}"
         echo -e ""
 		echo -e " "
-		echo -e "------------------------|--------------------------------|-------------------------"
-		echo -e "                 Sonos $device Menu : $playing                                     "
-		echo -e "------------------------|--------------------------------|-------------------------"
+		echo -e "------------------------|--------------------------------|------------------------------"
+		echo -e "                 Sonos $device Menu : $playing                                          "
+		echo -e "------------------------|--------------------------------|------------------------------"
 		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}               " " | " "26) ➔ ${bgd}I${reset}nfos     "
 		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON                 " " | " "27) ➔ ${bgd}L${reset}ists     "
 		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}               " " | " "28) Pl${bgd}a${reset}y radio from TuneIn               "
 		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF                " " | " "29) Pla${bgd}y${reset} local .m3u playlist               "
-		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}               " " | " "30) Play al${bgd}b${reset}ums               "
-		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) volume ${bgd}+${reset}                " " | " "31) Play artists (${bgd}x${reset}) "
-		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) volume ${bgd}-${reset}                " " | " "32) Play tracks (${bgd}y${reset})  "
-		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "33) Sleeep (${bgd}j${reset})      "
-		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "34) Sha${bgd}z${reset}aaaam        "
-		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35) S${bgd}w${reset}itch Status Light    "
-		echo -e "                      " " | " "21) ${bgd}s${reset}tart $device12      " " | " "36)     "
+		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}               " " | " "30) Play locals audio files               "
+		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) volume ${bgd}+${reset}                " " | " "31) Play al${bgd}b${reset}ums               "
+		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) volume ${bgd}-${reset}                " " | " "32) Play artists (${bgd}x${reset}) "
+		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "33) Play tracks (${bgd}y${reset})  "
+		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "34) Sleeep (${bgd}j${reset})      "
+		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35) Sha${bgd}z${reset}aaaam        "
+		echo -e "                      " " | " "21) ${bgd}s${reset}tart $device12      " " | " "36) S${bgd}w${reset}itch Status Light    "
 		echo -e "                      " " | " "22) s${bgd}t${reset}op $device12       " " | " "37)     "
 		echo -e "                      " " | " "23)                         " " | " "38)     "
 		echo -e "                      " " | " "24)                         " " | " "39)     "
@@ -341,12 +341,13 @@ soco() {
 			27|l|L) soco_lists $device;;
 			28|a|A) play_radio_from_tunein;;
 			29|y|Y) play_local_m3u;;
-			30|b|B) play_album_from_library;;
-			31|x|X) play_artist_from_library;;
-			32|y|Y) play_track_from_library;;
-			33|j|J) sleeep;;
-			34|z|Z) option_27;;
-			35|w|W) led;;
+			30) play_local_file;;	
+			31|b|B) play_album_from_library;;
+			32|x|X) play_artist_from_library;;
+			33|y|Y) play_track_from_library;;
+			34|j|J) sleeep;;
+			35|z|Z) option_27;;
+			36|w|W) led;;
 			40|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
@@ -537,6 +538,100 @@ play_local_m3u() {
 		sonos $loc $device play_m3u "$fp" pi
 	else
 		echo -e "File ${bold}$m3u${reset} doesn't exist!"
+	fi
+}
+
+# Read tags from mp3 file
+minfo () {
+	#echo "s1: $1"
+	info=$(mediainfo "$1")
+	
+	album=$(echo "$info" | grep -m 1 'Album ')
+	performer=$(echo "$info" | grep -m 1 'Performer')
+	duration=$(echo "$info" | grep -m 1 'Duration ')
+	track=$(echo "$info" | grep -m 1 'Track name ')
+	year=$(echo "$info" | grep -m 1 'Recorded date ')
+	codec=$(echo "$info" | grep -m 1 'Codec ID/Info ')
+	format=$(echo "$info" | grep -m 1 'Format ')
+	profile=$(echo "$info" | grep -m 1 'Format profile ')
+	format="${format#*: } ${profile#*: }"
+	
+	if [ -n "$2" ]; then	
+		printf " %-2s %-20s  %-30s %-30s %-12s %-10s \n" "$2" "${performer#*: }" "${track#*: }" "${album#*: }" "${duration#*: }" "${year#*: }"
+	else
+		printf " %-12s  %-35s \n" "Artist:" "${performer#*: }"
+		printf " %-12s  %-35s \n" "Track:" "${track#*: }"
+		printf " %-12s  %-35s \n" "Album:" "${album#*: }"
+		printf " %-12s  %-35s \n" "Duration:" "${duration#*: }"
+		printf " %-12s  %-35s \n" "Year:" "${year#*: }"
+		if [ -n "$codec" ]; then
+			printf " %-12s  %-35s \n" "Codec:" "${codec#*: }"
+		elif [ -n "$format" ]; then
+			printf " %-12s  %-35s \n" "Format:" "${format#*: }"
+		fi
+	fi
+}
+
+# play local file (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav)
+# alac in m4v
+
+play_local_file() {
+	playing="Play a local audio file..."
+    echo -e "\n${bold} $playing ${reset}\n"
+
+	echo -e "${underline}Enter audio file/folder path${reset} (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav) "
+	read -e -p ": " fa
+	
+	#fa=/Users/bruno/Music/Alanis\ Morissette\ -\ Such\ Pretty\ Forks\ In\ The\ Road
+	
+	if ! command -v mediainfo &> /dev/null; then
+		echo "Install mediainfo to display media tags !"
+		echo -e "${italic}brew install mediainfo${reset}"
+		mediainfo=false
+	else
+		mediainfo=true
+	fi
+	
+	audio=$(echo "$fa" | awk -F"/" '{print $NF}')
+	
+	if [ -d "$fa" ]; then
+		if [[ "$OSTYPE" == "darwin"* ]]; then
+			list=$(find -E "$fa" -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
+		else
+			list=$(find "$fa" -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort)
+		fi
+
+		echo -e "\n${underline}Tracks to play...${reset}"
+		i=1
+		while IFS= read -r line; do
+			[ "$mediainfo" = true ] && minfo "${line}" "$i"
+			((i++))
+		done <<< "$list"
+		
+		echo -e "\n${underline}Playing...${reset}"
+		echo -e "\nHit CTRL-C to play next track \n"
+		printf " %-2s %-20s  %-30s %-30s %-12s %-10s \n" "N°" "Artist" "Track" "Album" "Duration" "Year"
+		
+		i=1
+		while IFS= read -r line; do
+			[ "$mediainfo" = true ] && minfo "${line}" "$i"
+			
+			sonos $loc $device play_file "${line}"
+			((i++))
+		done <<< "$list"
+
+		#sonos $loc $device play_file "$list"
+	
+	elif [ -f "$fa" ]; then
+		echo -e "\nCurrently playing ${underline}$audio${reset} ...\n"
+		[ "$mediainfo" = true ] && minfo "$fa"
+
+		echo -e "\n${italic}Wait for the music to end, hit <sonos -l $device stop> from another shell or hit CTRL-C to quit${reset}"
+		sonos $loc $device play_file "$fa"
+		#album_art
+	else
+		echo -e "❗ ️File/folder ${bold}$audio${reset} doesn't exist!" && sleep 2
+		playing=""
 	fi
 }
 
