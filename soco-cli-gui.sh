@@ -283,6 +283,7 @@ soco() {
 	playing=""
 	device="$1"
 	
+	# don't touch spaces below
 	sp="            "
 	device12="${device:0:12}${sp:0:$((12 - ${#device}))}"
 	
@@ -311,7 +312,7 @@ soco() {
 		echo -e "                      " " | " "23)                         " " | " "38)     "
 		echo -e "                      " " | " "24)                         " " | " "39)     "
 		echo -e "                      " " | " "25)                         " " | " "40) ➔ ${bgd}H${reset}ome     "
-		echo -e "==================================================================================="
+		echo -e "========================================================================================"
 		echo -e "Enter your menu choice [1-40]: \c "
 		read soco_menu
 	
@@ -340,7 +341,7 @@ soco() {
 			26|i|I) soco_infos $device;;
 			27|l|L) soco_lists $device;;
 			28|a|A) play_radio_from_tunein;;
-			29|y|Y) play_local_m3u;;
+			29) play_local_m3u;;
 			30) play_local_file;;	
 			31|b|B) play_album_from_library;;
 			32|x|X) play_artist_from_library;;
@@ -638,28 +639,56 @@ play_local_file() {
 # Search artist in library -> add album to queue -> play it
 play_artist_from_library() {
 	read -p "Search artist in library: " search
-	sonos $loc $device search_artists "$search"
 	
+	a=$(sonos $loc $device search_artists "$search")
+	echo -e "$a\n"
 	read -p "Album to play: " number
-	sonos $loc $device queue_search_result_number $number first : $device play_from_queue
+	
+	b=$(echo "$a" | grep "$number: ")
+	album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
+	artist=$(echo "$b" | awk -F ": " '{print $4}')
+
+	playing="Playing $album from $artist..."
+    echo -e "\n${bold} $playing ${reset}"
+	
+	sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
 	}
 
 # Search album in library -> add to queue -> play it
 play_album_from_library() {
 	read -p "Search album in library: " search
-	sonos $loc $device search_albums "$search"
 	
+	a=$(sonos $loc $device search_albums "$search")
+	echo -e "$a\n"
 	read -p "Album to play: " number
-	sonos $loc $device queue_search_result_number $number first : $device play_from_queue
+	
+	b=$(echo "$a" | grep "$number: ")	
+	album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
+	artist=$(echo "$b" | awk -F ": " '{print $4}')
+	
+	playing="Playing $album from $artist..."
+    echo -e "\n${bold} $playing ${reset}"
+
+	sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
 	}
 
 # Search track in library -> add to queue -> play it
 play_track_from_library() {
 	read -p "Search track in library: " search
-	sonos $loc $device search_tracks "$search"
-
+	
+	a=$(sonos $loc $device search_tracks "$search")
+	echo -e "$a\n"
 	read -p "Track to play: " number
-	sonos $loc $device queue_search_result_number $number first : $device play_from_queue
+
+	b=$(echo "$a" | grep "$number: ")
+	# 1: Artist: Alain Souchon | Album: Collection (1984-2001) | Title: J'veux du cuir	
+	track=$(echo "$b" | awk -F ": " '{print $5}')
+	artist=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
+
+	playing="Playing $track from $artist..."
+    echo -e "\n${bold} $playing ${reset}"
+	
+	sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
 	}
 
 # Help
