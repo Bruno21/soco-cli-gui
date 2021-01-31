@@ -305,10 +305,10 @@ soco() {
 		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) volume ${bgd}+${reset}                " " | " "31) Play al${bgd}b${reset}ums               "
 		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) volume ${bgd}-${reset}                " " | " "32) Play artists (${bgd}x${reset}) "
 		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "33) Play tracks (${bgd}y${reset})  "
-		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "34) Sleeep (${bgd}j${reset})      "
-		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35) Sha${bgd}z${reset}aaaam        "
-		echo -e "                      " " | " "21) ${bgd}s${reset}tart $device12      " " | " "36) S${bgd}w${reset}itch Status Light    "
-		echo -e "                      " " | " "22) s${bgd}t${reset}op $device12       " " | " "37)     "
+		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "34) Play radio stream (${bgd}z${reset})      "
+		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35) Sleeep (${bgd}j${reset})      "
+		echo -e "                      " " | " "21) ${bgd}s${reset}tart $device12      " " | " "36) Sha${bgd}z${reset}aaaam        "
+		echo -e "                      " " | " "22) s${bgd}t${reset}op $device12       " " | " "37) S${bgd}w${reset}itch Status Light    "
 		echo -e "                      " " | " "23)                         " " | " "38)     "
 		echo -e "                      " " | " "24)                         " " | " "39)     "
 		echo -e "                      " " | " "25)                         " " | " "40) ➔ ${bgd}H${reset}ome     "
@@ -346,9 +346,10 @@ soco() {
 			31|b|B) play_album_from_library;;
 			32|x|X) play_artist_from_library;;
 			33|y|Y) play_track_from_library;;
-			34|j|J) sleeep;;
-			35|z|Z) option_27;;
-			36|w|W) led;;
+			34|z|Z) play_uri;;
+			35|j|J) sleeep;;
+			36|z|Z) option_27;;
+			37|w|W) led;;
 			40|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
@@ -689,6 +690,27 @@ play_track_from_library() {
     echo -e "\n${bold} $playing ${reset}"
 	
 	sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
+	}
+
+#Play URI
+play_uri() {
+	playing=""
+    echo -e "\n${bold} Play radio stream... ${reset}\n"
+    
+    read -p "Enter radio stream URL [.mp3|.aac|.m3u|.pls]: " url
+    #url="http://jazzradio.ice.infomaniak.ch/jazzradio-high.aac"
+    
+    read -p "Enter radio stream name: " title
+
+    if [[ "$url" =~ ^http ]]; then
+    	if [ -n "$title" ]; then playing="Playing $title radio stream..."
+    	else playing="Playing $url radio stream..."; fi
+    	echo -e "\n${bold} $playing ${reset}"
+    	sonos $loc $device play_uri $url "$title"
+    else
+    	echo -e "\nWrong radio stream URL !"
+    fi
+    sleep 2
 	}
 
 # Help
