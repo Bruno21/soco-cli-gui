@@ -645,7 +645,7 @@ play_artist_from_library() {
 	echo -e "$a\n"
 	read -p "Album to play: " number
 	
-	b=$(echo "$a" | grep "$number: ")
+	b=$(echo "$a" | grep -m 1 "$number: ")
 	album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
 	artist=$(echo "$b" | awk -F ": " '{print $4}')
 
@@ -663,7 +663,7 @@ play_album_from_library() {
 	echo -e "$a\n"
 	read -p "Album to play: " number
 	
-	b=$(echo "$a" | grep "$number: ")	
+	b=$(echo "$a" | grep -m 1 "$number: ")	
 	album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
 	artist=$(echo "$b" | awk -F ": " '{print $4}')
 	
@@ -681,7 +681,7 @@ play_track_from_library() {
 	echo -e "$a\n"
 	read -p "Track to play: " number
 
-	b=$(echo "$a" | grep "$number: ")
+	b=$(echo "$a" | grep -m 1 "$number: ")
 	# 1: Artist: Alain Souchon | Album: Collection (1984-2001) | Title: J'veux du cuir	
 	track=$(echo "$b" | awk -F ": " '{print $5}')
 	artist=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
@@ -692,7 +692,7 @@ play_track_from_library() {
 	sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
 	}
 
-#Play URI
+# Play URI
 play_uri() {
 	playing=""
     echo -e "\n${bold} Play radio stream... ${reset}\n"
