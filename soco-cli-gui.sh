@@ -300,7 +300,7 @@ soco() {
 		echo -e " 1) France In${bgd}f${reset}o       " " | " "11) volume ${bgd}11${reset}               " " | " "26) ➔ ${bgd}I${reset}nfos     "
 		echo -e " 2) France Int${bgd}e${reset}r      " " | " "12) ${bgd}m${reset}ute ON                 " " | " "27) ➔ ${bgd}L${reset}ists     "
 		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "13) volume ${bgd}13${reset}               " " | " "28) Pl${bgd}a${reset}y radio from TuneIn               "
-		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF                " " | " "29) Pla${bgd}y${reset} local .m3u playlist               "
+		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "14) m${bgd}u${reset}te OFF                " " | " "29) Play local .m3u playlist               "
 		echo -e " 5) ${bgd}R${reset}TL               " " | " "15) volume ${bgd}15${reset}               " " | " "30) Play locals audio files               "
 		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "16) volume ${bgd}+${reset}                " " | " "31) Play al${bgd}b${reset}ums               "
 		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) volume ${bgd}-${reset}                " " | " "32) Play artists (${bgd}x${reset}) "
@@ -530,7 +530,7 @@ play_local_m3u() {
 	#plt=$(ls *.m3u*)
 	#cd /Users/bruno/Music/Shaka\ Ponk\ -\ Apelogies/CD1
 	
-	read -e -p "Enter .m3u file path: " fp
+	read -e -i "$HOME/" -p "Enter .m3u file path: " fp
 	
 	m3u=$(echo "$fp" | awk -F"/" '{print $NF}')
 	if [ -a "$fp" ]; then
@@ -582,7 +582,7 @@ play_local_file() {
     echo -e "\n${bold} $playing ${reset}\n"
 
 	echo -e "${underline}Enter audio file/folder path${reset} (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav) "
-	read -e -p ": " fa
+	read -e -i "$HOME/" -p ": " fa
 	
 	#fa=/Users/bruno/Music/Alanis\ Morissette\ -\ Such\ Pretty\ Forks\ In\ The\ Road
 	
@@ -639,57 +639,84 @@ play_local_file() {
 
 # Search artist in library -> add album to queue -> play it
 play_artist_from_library() {
-	read -p "Search artist in library: " search
+	read -e -p "Search artist in library: " search
 	
-	a=$(sonos $loc $device search_artists "$search")
-	echo -e "$a\n"
-	read -p "Album to play: " number
+	if [ -n "$search" ]; then
+		a=$(sonos $loc $device search_artists "$search")
+		if [ -n "$a" ]; then
+			echo -e "$a\n"
+			read -e -p "Album to play (n°): " number
 	
-	b=$(echo "$a" | grep -m 1 "$number: ")
-	album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
-	artist=$(echo "$b" | awk -F ": " '{print $4}')
+			if [[ "$number" =~ ^[+-]?[0-9]+$ ]]; then
+				b=$(echo "$a" | grep -m 1 "$number: ")
+				album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
+				artist=$(echo "$b" | awk -F ": " '{print $4}')
 
-	playing="Playing $album from $artist..."
-    echo -e "\n${bold} $playing ${reset}"
+				playing="Playing $album from $artist..."
+	    		echo -e "\n${bold} $playing ${reset}"
 	
-	sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
+				sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
+			else echo "Please, enter the number of the album to play !"
+			fi
+		else echo -e "Artist ${underline}$search${reset} was not found !"
+		fi
+	else echo "Empty query !"
+	fi
 	}
 
 # Search album in library -> add to queue -> play it
 play_album_from_library() {
-	read -p "Search album in library: " search
-	
-	a=$(sonos $loc $device search_albums "$search")
-	echo -e "$a\n"
-	read -p "Album to play: " number
-	
-	b=$(echo "$a" | grep -m 1 "$number: ")	
-	album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
-	artist=$(echo "$b" | awk -F ": " '{print $4}')
-	
-	playing="Playing $album from $artist..."
-    echo -e "\n${bold} $playing ${reset}"
+	read -e -p "Search album in library: " search
 
-	sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
+	if [ -n "$search" ]; then	
+		a=$(sonos $loc $device search_albums "$search")
+		if [ -n "$a" ]; then
+			echo -e "$a\n"
+			read -e -p "Album to play (n°): " number
+	
+			if [[ "$number" =~ ^[+-]?[0-9]+$ ]]; then
+				b=$(echo "$a" | grep -m 1 "$number: ")	
+				album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
+				artist=$(echo "$b" | awk -F ": " '{print $4}')
+	
+				playing="Playing $album from $artist..."
+		    	echo -e "\n${bold} $playing ${reset}"
+
+				sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
+			else echo "Please, enter the number of the album to play !"
+			fi
+		else echo -e "Album ${underline}$search${reset} was not found !"
+		fi			
+	else echo "Empty query !"
+	fi
 	}
 
 # Search track in library -> add to queue -> play it
 play_track_from_library() {
-	read -p "Search track in library: " search
+	read -e -p "Search track in library: " search
 	
-	a=$(sonos $loc $device search_tracks "$search")
-	echo -e "$a\n"
-	read -p "Track to play: " number
+	if [ -n "$search" ]; then	
+		a=$(sonos $loc $device search_tracks "$search")
+		if [ -n "$a" ]; then
+			echo -e "$a\n"
+			read -e -p "Track to play: " number
 
-	b=$(echo "$a" | grep -m 1 "$number: ")
-	# 1: Artist: Alain Souchon | Album: Collection (1984-2001) | Title: J'veux du cuir	
-	track=$(echo "$b" | awk -F ": " '{print $5}')
-	artist=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
+			if [[ "$number" =~ ^[+-]?[0-9]+$ ]]; then
+				b=$(echo "$a" | grep -m 1 "$number: ")
+				# 1: Artist: Alain Souchon | Album: Collection (1984-2001) | Title: J'veux du cuir	
+				track=$(echo "$b" | awk -F ": " '{print $5}')
+				artist=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
 
-	playing="Playing $track from $artist..."
-    echo -e "\n${bold} $playing ${reset}"
+				playing="Playing $track from $artist..."
+		    	echo -e "\n${bold} $playing ${reset}"
 	
-	sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
+				sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
+			else echo "Please, enter the number of the track to play !"
+			fi
+		else echo -e "Track ${underline}$search${reset} was not found !"
+		fi			
+	else echo "Empty query !"
+	fi
 	}
 
 # Play URI
