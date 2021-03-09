@@ -75,7 +75,7 @@ main() {
 		echo -e "================================="
 		echo -e "Enter your menu choice [1-$k]: \c "
 
-		read main_menu
+		read -e main_menu
 		
 
 		for i in {3..4}
@@ -306,15 +306,15 @@ soco() {
 		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "17) volume ${bgd}-${reset}                " " | " "32) Play artists (${bgd}x${reset}) "
 		echo -e " 8)                   " " | " "18) pause ${bgd}o${reset}n $device12   " " | " "33) Play tracks (${bgd}y${reset})  "
 		echo -e " 9)                   " " | " "19) ${bgd}p${reset}rev on $device12    " " | " "34) Play radio stream (${bgd}z${reset})      "
-		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35) Sleeep (${bgd}j${reset})      "
-		echo -e "                      " " | " "21) ${bgd}s${reset}tart $device12      " " | " "36) Sha${bgd}z${reset}aaaam        "
-		echo -e "                      " " | " "22) s${bgd}t${reset}op $device12       " " | " "37) S${bgd}w${reset}itch Status Light    "
-		echo -e "                      " " | " "23)                         " " | " "38)     "
+		echo -e "10)                   " " | " "20) ${bgd}n${reset}ext on $device12    " " | " "35) Create a playlist      "
+		echo -e "                      " " | " "21) ${bgd}s${reset}tart $device12      " " | " "36) Sleeep (${bgd}j${reset})      "
+		echo -e "                      " " | " "22) s${bgd}t${reset}op $device12       " " | " "37) Sha${bgd}z${reset}aaaam        "
+		echo -e "                      " " | " "23)                         " " | " "38) S${bgd}w${reset}itch Status Light    "
 		echo -e "                      " " | " "24)                         " " | " "39)     "
 		echo -e "                      " " | " "25)                         " " | " "40) ➔ ${bgd}H${reset}ome     "
 		echo -e "========================================================================================"
 		echo -e "Enter your menu choice [1-40]: \c "
-		read soco_menu
+		read -e soco_menu
 	
 		case "$soco_menu" in
 
@@ -347,12 +347,13 @@ soco() {
 			32|x|X) play_artist_from_library;;
 			33|y|Y) play_track_from_library;;
 			34|z|Z) play_uri;;
-			35|j|J) sleeep;;
+			35)make_playlist;;
+			36|j|J) sleeep;;
 			36|z|Z) option_27;;
 			37|w|W) led;;
 			40|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
-			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
+			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read -e ;;
 		esac
 	done
 	}
@@ -634,6 +635,69 @@ play_local_file() {
 	else
 		echo -e "❗ ️File/folder ${bold}$audio${reset} doesn't exist!" && sleep 2
 		playing=""
+	fi
+}
+
+make_playlist() {
+
+	playing="Create a playlist..."
+    echo -e "\n${bold} $playing ${reset}\n"
+	
+	# GNU bash, version 3.2.57(1)-release-(x86_64-apple-darwin20)
+	#read -e -p "Choose folder to create playlist from: " folder
+	# GNU bash, version 5.1.4(1)-release (x86_64-apple-darwin19.6.0) (brew install bash)
+	read -e -i "$HOME/Music/" -p "Choose folder to create playlist from: " folder
+	
+	if [ -d "$folder" ]; then
+			
+		read -e -p "Include subfolder ? (y/n) " sub
+		
+		if [ "$sub" == "y" ] || [ "$sub" == "Y" ]; then		
+			#m3u=$(echo "$fp" | awk -F"/" '{print $NF}')	
+			if [[ "$OSTYPE" == "darwin"* ]]; then list=$(find -E "$folder" -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
+			else list=$(find "$folder" -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort); fi	
+		else
+			if [[ "$OSTYPE" == "darwin"* ]]; then list=$(find -E "$folder" -maxdepth 1 -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
+			else list=$(find "$folder" -maxdepth 1 -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort); fi
+		fi
+		
+		while [ true ] ; do
+			read -t 10 -e -p "Give a name to the playlist (without extension): " pl_name
+			if [ -n "$pl_name" ] ; then
+				break ;
+			else
+				echo "Waiting for a name !"
+			fi
+		done
+
+		plst="$pl_name.m3u"
+		printf "#EXTM3U\n" > "$plst"
+		echo "$list" >> "$plst"
+		
+		
+		read -e -p "Do you want to edit $plst ? (y/n) " edit	
+		if [ "$edit" == "y" ] || [ "$edit" == "Y" ]; then
+			[ -n $EDITOR ] && $EDITOR "$plst" || nano "$plst"
+		fi
+
+		# Extract album art from .mp3
+		# ffmpeg -hide_banner -loglevel error -i 01.\ Portez\ vos\ croix.mp3 -s 300x300 album_art.jpg
+		
+		read -e -p "Do you want to play $plst ? (y/n) " play	
+		if [ "$play" == "y" ] || [ "$play" == "Y" ]; then
+			playing="Playing the ${bold_under}$plst${reset}${underline} playlist..."
+			echo -e "\n${underline}$playing${reset}"
+			pls=$(cat "$plst")
+			echo -e "\n$pls\n"
+			
+			### BUG: bloc menu avec CTRL-C ###
+			
+			echo -e "Hit CTRL-C to exit playlist \n"
+			sonos $loc $device play_m3u "$plst" pi
+		fi
+
+	else
+		echo "Folder $folder doesn't exist !'"
 	fi
 }
 
