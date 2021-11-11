@@ -3,6 +3,9 @@
 # A bash GUI for soco-cli (https://github.com/avantrec/soco-cli/)
 # Apache License 2.0
 
+# soco-cli installed in venv $HOME/Documents/venv/soco-cli/bin
+# and added to $PATH -> export PATH="$HOME/Documents/venv/soco-cli/bin:$PATH"
+
 #set -e
 #set -u
 #set -o pipefail
@@ -15,7 +18,11 @@ else loc=" -l"; fi
 # add_your_token_below
 GITHUB_TOKEN=
 
-discover=$(sonos-discover -p)
+discover=$(sonos-discover -p 2>/dev/null)
+if [ -z "$discover" ]; then
+	discover=$(sonos-discover -t 256 -n 1.0 -m 24)
+fi
+
 dev=$(echo "$discover" | grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}")
 nbdevices=$(echo "$discover" | grep "Sonos device(s) found" | awk '{print $1}')
 
@@ -168,7 +175,7 @@ about() {
 	echo ""
 	echo "https://github.com/avantrec/soco-cli"
 	echo ""
-	echo "To install / upgrade soco-cli: pip3 install -U soco-cli (last tag: $last_tag)"
+	echo "To install / upgrade soco-cli: pip install -U soco-cli (last tag: $last_tag)"
 	
 	echo -e "\n$vers\n"
 	echo "<Press Enter to quit>"
