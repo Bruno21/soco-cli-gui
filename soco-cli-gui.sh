@@ -19,6 +19,7 @@ bgd="\033[1;4;31m"
 red="\033[1;31m"
 bold="\033[1m"
 bold_under="\033[1;4m"
+greenbold="\033[1;32m"
 reset="\033[0m"
 
 list="local"
@@ -341,11 +342,11 @@ soco() {
 			15) level_15;;
 			16|+) vol_+;;
 			17|-) vol_-;;
-			27|o|N) pause_dev;;
-			28|p|P) prev_dev;;
-			29|n|N) next_dev;;
-			30|s|S) start_dev;;
-			31|t|T) stop_dev;;
+			27|o|N) pause;;
+			28|p|P) prev;;
+			29|n|N) next;;
+			30|s|S) start;;
+			31|t|T) stop;;
 			32) party_mode;;
 			33|g|G) groupstatus;;
 			34|u|U) ungroup_all;;
@@ -463,35 +464,35 @@ level_15() {
 	}
 
 # Start $device
-start_dev() {
+start() {
 	playing="Start $device..."	# <= Shazaaam
     echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device start && sleep 2
 	}
 
 # Stop $device
-stop_dev() {
+stop() {
 	playing="Stop $device..."
     echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device stop && sleep 2
 	}
 
 # Pause $device
-pause_dev() {
+pause() {
 	playing="Pause $device..."
     echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device pause && sleep 2
 	}
 
 # Previous tracks
-prev_dev() {
+prev() {
 	#playing="Start $device..."	# <= Shazaaam
     echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device previous && sleep 2
 	}
 
 # Next tracks
-next_dev() {
+next() {
 	#playing="Stop $device..."	# <= Shazaaam
     echo -e "\n${bold} $playing ${reset}"
     sonos $loc $device next && sleep 2
@@ -534,7 +535,7 @@ rename_spk() {
     #exec "$ScriptLoc"
 	}
 
-vol_+() {
+vol+() {
 	#playing="Volume +..."
     #echo -e "\n${bold} $playing ${reset}"
     volume=$(sonos $loc $device volume)
@@ -543,7 +544,7 @@ vol_+() {
     echo -e "\nSet volume to ${bold}level $vol${reset}" && sleep 0.5
 	}
 
-vol_-() {
+vol-() {
 	#playing="Volume -..."
     #echo -e "\n${bold} $playing ${reset}"
     volume=$(sonos $loc $device volume)
@@ -1519,10 +1520,10 @@ cli_help(){
 	echo
 	echo "Run soco-cli-gui.sh <function> (eg. soco-cli-gui.sh deezer_flow)"
 	echo
-	printf "${bold}| %-25s | %-126s ${reset}\n" "Function name" "Role"
+	printf "${greenbold}| %-25s | %-126s ${reset}\n" "Function name" "Role"
 	printf "${bold}| %-25s | %-126s ${reset}\n" "-------------------------" "--------------------------------------------------------------------------"
 	
-	echo -e "\n${bold}Favorites${reset}"
+	echo -e "\n${greenbold}Favorites${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "deezer_flow" "Play Deezer flow"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "franceinfo" "Play France Info radio"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "franceinter" "Play France Inter radio"
@@ -1530,49 +1531,49 @@ cli_help(){
 	printf "| ${bold}%-25s${reset} | %-126s \n" "rires" "Play Rires et Chansons radio"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "rtl" "Play RTL radio"
 	
-	echo -e "\n${bold}Volume${reset}"	
+	echo -e "\n${greenbold}Volume${reset}"	
 	printf "| ${bold}%-25s${reset} | %-126s \n" "level_11" "Set volume level to 11"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "level_13" "Set volume level to 13"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "level_15" "Set volume level to 15"
-	printf "| ${bold}%-25s${reset} | %-126s \n" "vol_+" "Turn up the volume"
-	printf "| ${bold}%-25s${reset} | %-126s \n" "vol_-" "Lower the volume"
+	printf "| ${bold}%-25s${reset} | %-126s \n" "vol+" "Turn up the volume"
+	printf "| ${bold}%-25s${reset} | %-126s \n" "vol-" "Lower the volume"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "mute_off" "Sets the mute setting of the speaker to 'off'."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "mute_on" "Sets the mute setting of the speaker to 'on'."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all_mute_off" "Sets the mute setting of all speaker (coordinators) to 'off'."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all_mute_on" "Sets the mute setting of all speaker (coordinators) to 'on'."
 
-	echo -e "\n${bold}Sleep${reset}"
+	echo -e "\n${greenbold}Sleep${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep" "Sleep menu"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep_duration" "Device goes to sleep in <duration>."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep_timer" "Device goes to sleep at <time>."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep_cancel" "Cancel timer"
 
-	echo -e "\n${bold}Light${reset}"
+	echo -e "\n${greenbold}Light${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all_status_light_off" "Switch all speaker's status light off."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all_status_light_on" "Switch all speaker's status light on."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "led" "Switch status light."
 
-	echo -e "\n${bold}Playlist${reset}"
+	echo -e "\n${greenbold}Playlist${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "create_playlist" "Create a Sonos playlist named <playlist>."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "delete_playlist" "Delete the Sonos playlist named <playlist>."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "make_playlist" "Create a playlist."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "remove_from_playlist" "Remove a track from a Sonos playlist."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "list_playlists" "Lists the Sonos playlists."
 
-	echo -e "\n${bold}Queue${reset}"
+	echo -e "\n${greenbold}Queue${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "add_playlist_to_queue" "Add <playlist_name> to the queue. The number in the queue of the first track in the playlist will be returned. "
 	printf "| ${bold}%-25s${reset} | %-126s \n" "remove_from_queue" "Remove tracks from the queue. Track numbers start from 1. (single integers, sequences ('4,7,3'), ranges ('5-10')"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "list_queue" "List the tracks in the queue."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "clear_queue" "Clears the current queue."
 
-	echo -e "\n${bold}Command${reset}"
-	printf "| ${bold}%-25s${reset} | %-126s \n" "pause_dev" "Pause playback."
-	printf "| ${bold}%-25s${reset} | %-126s \n" "next_dev" "Move to the next track."
-	printf "| ${bold}%-25s${reset} | %-126s \n" "prev_dev" "Move to the previous track."
-	printf "| ${bold}%-25s${reset} | %-126s \n" "start_dev" "Start playback."
-	printf "| ${bold}%-25s${reset} | %-126s \n" "stop_dev" "Stop playback."
+	echo -e "\n${greenbold}Command${reset}"
+	printf "| ${bold}%-25s${reset} | %-126s \n" "pause" "Pause playback."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "next" "Move to the next track."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "prev" "Move to the previous track."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "start" "Start playback."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "stop" "Stop playback."
 
-	echo -e "\n${bold}Infos / Help${reset}"
+	echo -e "\n${greenbold}Infos / Help${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "about" "About soco-cli-gui"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "help" "Help"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "inform" "Device informations"
@@ -1581,7 +1582,7 @@ cli_help(){
 	printf "| ${bold}%-25s${reset} | %-126s \n" "shazam" "Identify current playing track, like Shazam"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "alarms" "List all of the alarms in the Sonos system."
 
-	echo -e "\n${bold}Play${reset}"
+	echo -e "\n${greenbold}Play${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_album_from_library" "Search album in library -> add to queue -> play."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_artist_from_library" "Search artist in library -> add to queue -> play."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_local_dir" "Play all of the audio files in the specified local directory (does not traverse into subdirectories)"
@@ -1592,30 +1593,30 @@ cli_help(){
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_track_from_library" "Search track in library -> add to queue -> play."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_uri" "Plays the audio object given by the <uri> parameter (e.g., a radio stream URL)"
 
-	echo -e "\n${bold}Lists${reset}"
+	echo -e "\n${greenbold}Lists${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "list_albums" "Lists all the albums in the music library."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "list_all_playlist_tracks" "Lists all tracks in all Sonos Playlists."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "list_artists" "Lists all the artists in the music library."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "list_favs" "Lists all Sonos favourites."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "favourite_radio_stations" "List the favourite radio stations."
 
-	echo -e "\n${bold}Speaker${reset}"
+	echo -e "\n${greenbold}Speaker${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "delete_speaker_cache" "Delete speaker cache"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "refresh_speaker_list" "Refresh speaker cache"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "rename_spk" "Rename speaker"
 
-	echo -e "\n${bold}Shares${reset}"
+	echo -e "\n${greenbold}Shares${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "reindex" "Start a reindex of the local music libraries."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "shares" "List the local music library shares."
 
-	echo -e "\n${bold}Groups / zones${reset}"
+	echo -e "\n${greenbold}Groups / zones${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "party_mode" "Adds all speakers in the system into a single group. The target speaker becomes the group coordinator."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "ungroup_all" "Removes all speakers in the target speaker's household from all groups."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "groupstatus" "Indicates whether the speaker is part of a group, and whether it's part of a stereo pair or bonded home theatre configuration."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "info_groups" "Lists all groups in the Sonos system. Also includes single speakers as groups of one, and paired/bonded sets as groups."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all_zones" "Prints a simple list of comma separated visible zone/room names. Use all_zones (or all_rooms) to return all devices including ones not visible in the Sonos controller apps."
 
-	echo -e "\n${bold}Menus${reset}"
+	echo -e "\n${greenbold}Menus${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "soco_infos" "Sonos infos Menu."	
 	printf "| ${bold}%-25s${reset} | %-126s \n" "soco_lists" "Sonos lists Menu."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all" "Sonos _all_ Menu."	
@@ -1668,8 +1669,6 @@ if [ -n "$func" ]; then
 			device=$(echo "$dev" | cut -d ' ' -f1 | grep -v $default | sed -n '1p')
 		fi
 		
-		echo "$device"
-		read -p "< Press Enter>"
 		
 		if [ -n "$param" ]; then
 			$func $param
