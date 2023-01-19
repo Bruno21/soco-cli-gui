@@ -1,4 +1,4 @@
-#/usr/bin/env bash
+#!/usr/bin/env bash
 
 # /opt/homebrew/etc/bash_completion.d/soco-cli-gui-completion.bash
 
@@ -8,9 +8,8 @@ underline="\033[4m"
 bold="\033[1m"
 reset="\033[0m"
 
-SCRIPT_PATH=`pwd`
+SCRIPT_PATH=$(pwd)
 completion_path="/opt/homebrew/etc/bash_completion.d"
-
 
 # Make soco-cli-gui accessible in PATH
 

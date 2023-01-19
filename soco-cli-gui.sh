@@ -186,64 +186,91 @@ help() {
 
 	echo -e "\n${bold}Main Menu:${reset}"
 			
-	echo -e "  ${italic}1) About:${reset} about page"
-	echo -e "  ${italic}2) Help:${reset} this page"
+	echo -e "  ${greenbold}1) About:${reset} about page"
+	echo -e "  ${greenbold}2) Help:${reset} this page"
 	u=$((3+nbdevices-1))
 	#echo "$u"
 	echo -e "  Next (3-$u), all your Sonos device are automatically discover. Each call the main function soco()"
-	echo -e "  ${italic}3-$u) ➔ Sonos <model> device <Name>:${reset} Command your <Name> device"
+	echo -e "  ${greenbold}3-$u) ➔ Sonos <model> device <Name>:${reset} Command your <Name> device"
 	#echo -e "  Last,  device"
-	echo -e "  ${italic}$((u+1))) ➔ All devices:${reset} command all your device together"	
-	echo -e "  ${italic}$((u+2))) Quit:${reset} quit the app" 
+	echo -e "  ${greenbold}$((u+1))) ➔ All devices:${reset} command all your device together"	
+	echo -e "  ${greenbold}$((u+2))) Quit:${reset} quit the app" 
+
 
 	echo -e "\n${bold}Sonos <$device> Menu:${reset}"
 
-	echo -e " ${italic}[1-10] Play favorites:${reset} edit and duplicate functions option_1 to option_10 to add your favs"
-	echo -e " ${italic}11) volume 11:${reset} set volume to level 11"
-	echo -e " ${italic}12) mute ON:${reset}          "
-	echo -e " ${italic}13) volume 13:${reset} set volume to level 13"
-	echo -e " ${italic}14) mute OFF:${reset}        "
-	echo -e " ${italic}15) volume 15:${reset} set volume to level 15"
-	echo -e " ${italic}16) start <$device>:${reset}      "
-	echo -e " ${italic}17) stop <$device>:${reset}       "
-	echo -e " ${italic}18) pause on $device>:${reset}   "
-	echo -e " ${italic}19) prev on <$device>:${reset}    "
-	echo -e " ${italic}20) next on <$device>:${reset}    "
-
-	echo -e " ${italic}21) ➔ Infos :${reset}    "
-	echo -e " ${italic}22) ➔ Lists :${reset}   "
-	echo -e " ${italic}23) Play albums:${reset}               "
-	echo -e " ${italic}24) Play artists:${reset} "
-	echo -e " ${italic}25) Play tracks:${reset}  "
-	echo -e " ${italic}26) Sleeep:${reset}      "
-	echo -e " ${italic}27) Shazaaaam:${reset}        "
-	echo -e " ${italic}28) Switch Status Light:${reset}"
-	echo -e " ${italic}29) Help:${reset}        "
-	echo -e " ${italic}30) ➔ Accueil :${reset}     "
-
+	echo -e " ${greenbold}[1-10] Play favorites:${reset} edit and duplicate functions option_1 to option_10 to add your favs"
+	
+	echo -e " ${greenbold}11) Volume 11:${reset} set volume to level 11"
+	echo -e " ${greenbold}12) Mute ON:${reset} sets the mute setting of the speaker to 'on'"
+	echo -e " ${greenbold}13) Volume 13:${reset} set volume to level 13"
+	echo -e " ${greenbold}14) Mute OFF:${reset} sets the mute setting of the speaker to 'off'"
+	echo -e " ${greenbold}15) Volume 15:${reset} set volume to level 15"
+	echo -e " ${greenbold}16) Volume +:${reset} turn up the volume"
+	echo -e " ${greenbold}17) Volume -:${reset} lower the volume"
+	echo
+	echo -e " ${greenbold}27) Pause on <device>:${reset} pause playback"
+	echo -e " ${greenbold}28) Prev on <device>:${reset} move to the previous track"
+	echo -e " ${greenbold}29) Next on <device>:${reset} move to the next track"
+	echo -e " ${greenbold}30) Start <device>:${reset} start playback"
+	echo -e " ${greenbold}31) Stop <device>:${reset} stop playback"
+	echo
+	echo -e " ${greenbold}32) Party mode <device>:${reset} adds all speakers in the system into a single group. The target speaker becomes the group coordinator"
+	echo -e " ${greenbold}33) Group status <device>:${reset} indicates whether the speaker is part of a group, and whether it's part of a stereo pair or bonded home theatre configuration"
+	echo -e " ${greenbold}34) Ungroup all speakers:${reset} removes all speakers in the target speaker's household from all groups"
+	echo
+	echo -e " ${greenbold}35) ➔ Infos :${reset} go to menu Infos"
+	echo -e " ${greenbold}36) ➔ Lists :${reset} go to menu Lists"
+	echo	
+	echo -e " ${greenbold}37) Play radio from TuneIn:${reset} play favorite from TuneIn radio"
+	echo -e " ${greenbold}38) Play local .m3u playlist:${reset} play a local M3U/M3U8 playlist consisting of local audio files (in supported audio formats)"
+	echo -e " ${greenbold}39) Play local audio files:${reset} play MP3, M4A, MP4, FLAC, OGG, WMA, WAV, or AIFF audio files from your computer. Multiple filenames can be provided and will be played in sequence."
+	echo -e " ${greenbold}40) Play local directories:${reset} play all of the audio files in the specified local directory (does not traverse into subdirectories)"
+	echo -e " ${greenbold}41) Play shared links:${reset} play a shared link from Deezer,Spotify, Tidal or Apple Music"
+	echo	
+	echo -e " ${greenbold}42) Play albums:${reset} search album in library -> add to queue -> play"
+	echo -e " ${greenbold}43) Play artists:${reset} search artist in library -> add to queue -> play"
+	echo -e " ${greenbold}44) Play tracks:${reset} search track in library -> add to queue -> play"
+	echo -e " ${greenbold}45) Play radio stream:${reset} play the audio object given by the <uri> parameter (e.g., a radio stream URL)"
+	echo -e " ${greenbold}46) Create a playlist:${reset} create a Sonos playlist named <playlist>"
+	echo	
+	echo -e " ${greenbold}47) ➔ Sleeep:${reset} go to sleep menu"
+	echo	
+	echo -e " ${greenbold}48) Shazaaaam:${reset} identify current playing track, like Shazam"
+	echo -e " ${greenbold}49) Switch Status Light:${reset}"
+	echo -e " ${greenbold}50) Rename speaker <device>:${reset}"
+	echo -e " ${greenbold}51) ➔ Home :${reset} go to Home menu"
+	echo
 	echo -e "\n${bold}Sonos <$device> infos Menu:${reset}"
-	echo -e " ${italic}1) Alarms:${reset}                   " 
-	echo -e " ${italic}2) Groups:${reset}                  "
-	echo -e " ${italic}3) Info:${reset}                     "
-	echo -e " ${italic}4) Shares:${reset}                   "
-	echo -e " ${italic}5) Sysinfo:${reset}                  "
-	echo -e " ${italic}10) Return:${reset}                   "
-
+	echo -e " ${greenbold}1) Alarms:${reset} list all of the alarms in the Sonos system" 
+	echo -e " ${greenbold}2) Groups:${reset} lists all groups in the Sonos system. Also includes single speakers as groups of one, and paired/bonded sets as groups"
+	echo -e " ${greenbold}3) Info:${reset} device informations"
+	echo -e " ${greenbold}4) Shares:${reset} list the local music library shares"
+	echo -e " ${greenbold}5) Reindex shares:${reset} start a reindex of the local music libraries"
+	echo -e " ${greenbold}6) Sysinfo:${reset} prints a table of information about all speakers in the system"
+	echo -e " ${greenbold}7) All zones:${reset} prints a simple list of comma separated visible zone/room names. Use all_zones (or all_rooms) to return all devices including ones not visible in the Sonos controller apps"
+	echo -e " ${greenbold}8) Refreshing the Local Speaker List:${reset} refresh speaker cache"
+	echo -e " ${italic}9) Delete the local speaker cache file:${reset} delete speaker cache"
+	echo -e " ${italic}10) Return:${reset} go to Home menu"
+	echo
 	echo -e "\n${bold}Sonos <$device> lists Menu:${reset}"
-	echo -e " ${italic}1) Favourite radio stations:${reset} "
-	echo -e " ${italic}2) Favourites:${reset}               "
-	echo -e " ${italic}3) Queue:${reset}                   "
-	echo -e " ${italic}4) List artists:${reset} list artists on library"
-	echo -e " ${italic}5) List albums:${reset} list albums on library"
-	echo -e " ${italic}8) Remove from queue:${reset}        "
-	echo -e " ${italic}9) Clear queue:${reset}              "
-	echo -e " ${italic}11) Create Sonos playlist:${reset}               "
-	echo -e " ${italic}12) List playlists:${reset}                     "
-	echo -e " ${italic}13) Delete playlists:${reset}                    "
-	echo -e " ${italic}14) Lists tracks in all Sonos Playlists:${reset} "
-	echo -e " ${italic}15) Add a Sonos playlist to queue:${reset}       "
-	echo -e " ${italic}16) Remove a track from a Sonos playlist:${reset}                                    "
-	echo -e " ${italic}20) Return:${reset}                             "
+	echo -e " ${greenbold}1) Favourite radio stations:${reset} lists the favourite radio stations"
+	echo -e " ${greenbold}2) Favourites:${reset} lists all Sonos favourites"	echo
+	echo
+	echo -e " ${greenbold}3) Queue:${reset} list the tracks in the queue"
+	echo -e " ${greenbold}4) Remove from queue:${reset} remove tracks from the queue. Track numbers start from 1. (single integers, sequences ('4,7,3'), ranges ('5-10')"
+	echo -e " ${greenbold}5) Clear queue:${reset} clears the current queue."
+	echo
+	echo -e " ${greenbold}7) List artists:${reset} list artists on library"
+	echo -e " ${greenbold}8) List albums:${reset} list albums on library"
+	echo
+	echo -e " ${greenbold}11) Create Sonos playlist:${reset} create a Sonos playlist named <playlist>"
+	echo -e " ${greenbold}12) List playlists:${reset} lists the Sonos playlists"
+	echo -e " ${greenbold}13) Delete playlists:${reset} delete the Sonos playlist named <playlist>"
+	echo -e " ${greenbold}14) Lists tracks in all Sonos Playlists:${reset} lists all tracks in all Sonos Playlists"
+	echo -e " ${greenbold}15) Add a Sonos playlist to queue:${reset} add <playlist_name> to the queue. The number in the queue of the first track in the playlist will be returned"
+	echo -e " ${greenbold}16) Remove a track from a Sonos playlist:${reset} remove tracks from the queue. Track numbers start from 1. (single integers, sequences ('4,7,3'), ranges ('5-10')"
+	echo -e " ${greenbold}20) Return:${reset} go to Home menu"
 
 	echo
 	echo -e "$(sonos-discover --docs)"
@@ -307,10 +334,10 @@ soco() {
 		echo -e " 1) France In${bgd}f${reset}o       " " | " "18)                         " " | " "35) ➔ ${bgd}I${reset}nfos     "
 		echo -e " 2) France Int${bgd}e${reset}r      " " | " "19)                         " " | " "36) ➔ ${bgd}L${reset}ists     "
 		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "20)                         " " | " "37) Pl${bgd}a${reset}y radio from TuneIn               "
-		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "21)                         " " | " "38 Play local .m3u playlist               "
+		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "21)                         " " | " "38) Play local .m3u playlist               "
 		echo -e " 5) ${bgd}R${reset}TL               " " | " "22)                         " " | " "39) Play locals audio files               "
 		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "23)                         " " | " "40) Play local directories                              "
-		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "24)                         " " | " "41) Deezer Share links                              "
+		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "24)                         " " | " "41) Play Shared links                              "
 		echo -e " 8)                   " " | " "25)                         " " | " "42) Play al${bgd}b${reset}ums               "
 		echo -e " 9)                   " " | " "26)                         " " | " "43) Play artists (${bgd}x${reset}) "
 		echo -e "10)                   " " | " "27) pause ${bgd}o${reset}n $device12   " " | " "44) Play tracks (${bgd}y${reset})  "
@@ -327,7 +354,7 @@ soco() {
 	
 		case "$soco_menu" in
 
-			# Play your favs from 1 to 10
+			# Play your favs from 1 to 51
 			1|f|F) franceinfo;;
 			2|e|E) franceinter;;
 			3|k|K) k6fm;;
