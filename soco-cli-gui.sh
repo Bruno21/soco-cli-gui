@@ -32,6 +32,9 @@ else loc=" -l"; fi
 # add_your_token_below
 GITHUB_TOKEN=
 
+# Step up/down volume
+step=2
+
 # Default Sonos device
 default="Salon"
 
@@ -164,7 +167,6 @@ about() {
 		#printf "\n\033]1337;File=;inline=1:`cat soco-cli-logo-01-large.png | base64`\a\n"
 		printf "\n\033]1337;File=;width=400px;inline=1:`cat soco-cli-logo-01-large.png | base64`\a\n"
 	else
-		#clear
 		echo ""
 		echo ""
 		echo -e "${greenbold}            #####             #####                     ####      ####                                 ## ${reset}"
@@ -331,7 +333,7 @@ soco() {
 	sp="            "
 	device12="${device:0:12}${sp:0:$((12 - ${#device}))}"
 
-	if [ -z "$playing" ]; then
+	if [ -z "$playing" ]; then	# playing est vide
     	on_air="$(shazam)"
 		curr=$(echo -e "$on_air" | sed -n '1p')
 		playing="Playing $curr..."
@@ -474,72 +476,86 @@ option_7() {
 
 # Set volume to level 11
 level_11() {
-	#playing="Playing Deezer Flow..."
     echo -e "\n${bold} Set volume to level 11... ${reset}"
     sonos $loc $device volume 11 && sleep 2
 	}
 
 # Mute ON
 mute_on() {
-	playing="Mute ON..."
-    echo -e "\n${bold} $playing ${reset}"
+    echo -e "\n${bold} Mute ON... ${reset}"
     sonos $loc $device mute on && sleep 2
 	}
 
 # Set volume to level 13
 level_13() {
-	#playing="Start $device..."
     echo -e "\n${bold} Set volume to level 13... ${reset}"
     sonos $loc $device volume 13 && sleep 2
 	}
 
 # Mute OFF
 mute_off() {
-	playing=""
     echo -e "\n${bold} Mute OFF... ${reset}"
     sonos $loc $device mute off && sleep 2
 	}
 
 # Set volume to level 15
 level_15() {
-	#playing="Stop $device..."
     echo -e "\n${bold} Set volume to level 15... ${reset}"
     sonos $loc $device volume 15 && sleep 2
 	}
 
 # Start $device
 start() {
-	playing="Start $device..."	# <= Shazaaam
-    echo -e "\n${bold} $playing ${reset}"
-    sonos $loc $device start && sleep 2
+	playing=""
+    sonos $loc $device start
+
+    on_air="$(shazam)"	# ligne 1114
+	curr=$(echo "$on_air" | sed -n '1p')
+	playing="Playing $curr..."
+	echo -e "\n${bold} Start $device playing $curr... ${reset}"
+	sleep 2
 	}
 
 # Stop $device
 stop() {
 	playing="Stop $device..."
-    echo -e "\n${bold} $playing ${reset}"
+    echo -e "\n${bold} Stop $device... ${reset}"
     sonos $loc $device stop && sleep 2
 	}
 
 # Pause $device
 pause() {
 	playing="Pause $device..."
-    echo -e "\n${bold} $playing ${reset}"
-    sonos $loc $device pause && sleep 2
+    echo -e "\n${bold} Pause $device... ${reset}"
+    sonos $loc $device pause && sleep 0.5
 	}
 
 # Previous tracks
 prev() {
-	#playing="Start $device..."	# <= Shazaaam
-    echo -e "\n${bold} $playing ${reset}"
-    sonos $loc $device previous && sleep 2
+	backup=$playing
+
+    sonos $loc $device previous 2>/dev/null
+    if [ $? > 0 ]; then
+    	msg="No applicable for the audio source !"
+    else
+    	msg="Prev. track on $device..."	# <= Shazaaam
+    fi
+    echo -e "\n${bold} $msg ${reset}"
+    sleep 2
 	}
 
 # Next tracks
 next() {
-	#playing="Stop $device..."	# <= Shazaaam
-    echo -e "\n${bold} $playing ${reset}"
-    sonos $loc $device next && sleep 2
+	backup=$playing
+
+    sonos $loc $device next 2>/dev/null
+    if [ $? > 0 ]; then
+    	msg="No applicable for the audio source !"
+    else
+    	msg="Next. track on $device..."	# <= Shazaaam
+    fi
+    echo -e "\n${bold} $msg ${reset}"
+    sleep 2
 	}
 
 # Party_mode
@@ -583,7 +599,7 @@ vol+() {
 	#playing="Volume +..."
     #echo -e "\n${bold} $playing ${reset}"
     volume=$(sonos $loc $device volume)
-    vol=$((volume+1))
+    vol=$((volume+$step))
     sonos $loc $device volume $vol
     echo -e "\nSet volume to ${bold}level $vol${reset}" && sleep 0.5
 	}
@@ -592,7 +608,7 @@ vol-() {
 	#playing="Volume -..."
     #echo -e "\n${bold} $playing ${reset}"
     volume=$(sonos $loc $device volume)
-    vol=$((volume-1))
+    vol=$((volume-$step))
     sonos $loc $device volume $vol
     echo -e "\nSet volume to ${bold}level $vol${reset}" && sleep 0.5
 	}
@@ -1102,6 +1118,8 @@ shazaaaam() {
 	fi
 	}
 
+# 507
+
 shazam() {
 	sz=$(sonos $loc $device track)
 	
@@ -1112,9 +1130,7 @@ shazam() {
 	playback=$(echo "$sz" | sed -n '2p')
 	#echo "$playback"
 	
-	#echo "-------"
-	
-	if [[ "$playback" =~ "Playback is in progress" ]]; then
+	if [[ "$playback" =~ "Playback is in progress" ]] || [[ "$playback" =~ "Playback is in a transitioning state" ]]; then
 
 		if [[ "$sz" =~ "Artist" ]]; then artist=$(echo "$sz" | grep "Artist" | awk -F"[=:]" '{print $2}' | xargs);
 		else artist=""; fi
