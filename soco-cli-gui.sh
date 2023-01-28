@@ -20,6 +20,8 @@ red="\033[1;31m"
 bold="\033[1m"
 bold_under="\033[1;4m"
 greenbold="\033[1;32m"
+greenita="\033[3;32m"
+cyanita="\033[3;36m"
 reset="\033[0m"
 
 list="local"
@@ -155,19 +157,27 @@ about() {
 	[ -n "$reponse" ] && last_tag=$(echo $reponse | jq '.[0] | (.name)') || last_tag="-"
 
 	clear
+	
+	#imgcat soco-cli-logo-01-large.png
+
+	if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
+		#printf "\n\033]1337;File=;inline=1:`cat soco-cli-logo-01-large.png | base64`\a\n"
+		printf "\n\033]1337;File=;width=400px;inline=1:`cat soco-cli-logo-01-large.png | base64`\a\n"
+	else
+		#clear
+		echo ""
+		echo ""
+		echo -e "${greenbold}            #####             #####                     ####      ####                                 ## ${reset}"
+		echo -e "${greenbold}           ##   ##           ##   ##                     ##        ## ${reset}"
+		echo -e "${greenbold}   #####   ##   ##   ####    ##   ##            ####     ##        ##               ### ##  ##  ##    ### ${reset}"
+		echo -e "${greenbold}  ##       ##   ##  ##  ##   ##   ##  ######   ##  ##    ##        ##              ##  ##   ##  ##     ## ${reset}"
+		echo -e "${greenbold}   #####   ##   ##  ##       ##   ##           ##        ##   #    ##              ##  ##   ##  ##     ## ${reset}"
+		echo -e "${greenbold}       ##  ##   ##  ##  ##   ##   ##           ##  ##    ##  ##    ##               #####   ##  ##     ## ${reset}"
+		echo -e "${greenbold}  ######    #####    ####     #####             ####    #######   ####                 ##    ######   #### ${reset}"
+		echo -e "${greenbold}                                                                                   ##### ${reset}"
+	fi
 	echo ""
-	echo -e "${bold}About:${reset}"
-	echo ""
-	echo -e "${bold}            #####             #####                     ####      ####                                 ## ${reset}"
-	echo -e "${bold}           ##   ##           ##   ##                     ##        ## ${reset}"
-	echo -e "${bold}   #####   ##   ##   ####    ##   ##            ####     ##        ##               ### ##  ##  ##    ### ${reset}"
-	echo -e "${bold}  ##       ##   ##  ##  ##   ##   ##  ######   ##  ##    ##        ##              ##  ##   ##  ##     ## ${reset}"
-	echo -e "${bold}   #####   ##   ##  ##       ##   ##           ##        ##   #    ##              ##  ##   ##  ##     ## ${reset}"
-	echo -e "${bold}       ##  ##   ##  ##  ##   ##   ##           ##  ##    ##  ##    ##               #####   ##  ##     ## ${reset}"
-	echo -e "${bold}  ######    #####    ####     #####             ####    #######   ####                 ##    ######   #### ${reset}"
-	echo -e "${bold}                                                                                   ##### ${reset}"
-	echo ""
-	echo "Just a GUI for the wonderful tool SoCo-Cli"
+	echo -e "${bold}Just a GUI for the wonderful tool SoCo-Cli${reset}"
 	echo ""
 	echo "https://github.com/avantrec/soco-cli"
 	echo ""
@@ -320,6 +330,12 @@ soco() {
 	# don't touch spaces below
 	sp="            "
 	device12="${device:0:12}${sp:0:$((12 - ${#device}))}"
+
+	if [ -z "$playing" ]; then
+    	on_air="$(shazam)"
+		curr=$(echo -e "$on_air" | sed -n '1p')
+		playing="Playing $curr..."
+	fi
 	
 	while :
 	do
@@ -329,14 +345,14 @@ soco() {
         echo -e ""
 		echo -e " "
 		echo -e "------------------------|--------------------------------|------------------------------"
-		echo -e "                 Sonos $device Menu : $playing                                          "
+		echo -e "${italic}                 Sonos $device Menu : $playing                         ${reset}"
 		echo -e "------------------------|--------------------------------|------------------------------"
 		echo -e " 1) France In${bgd}f${reset}o       " " | " "18)                         " " | " "35) ➔ ${bgd}I${reset}nfos     "
 		echo -e " 2) France Int${bgd}e${reset}r      " " | " "19)                         " " | " "36) ➔ ${bgd}L${reset}ists     "
 		echo -e " 3) ${bgd}K${reset}6 FM             " " | " "20)                         " " | " "37) Pl${bgd}a${reset}y radio from TuneIn               "
-		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "21)                         " " | " "38) Play local .m3u playlist               "
-		echo -e " 5) ${bgd}R${reset}TL               " " | " "22)                         " " | " "39) Play locals audio files               "
-		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "23)                         " " | " "40) Play local directories                              "
+		echo -e " 4) Rires et ${bgd}C${reset}hansons " " | " "21)                         " " | " "38) Play local .m3u playlist ${red}*${reset}              "
+		echo -e " 5) ${bgd}R${reset}TL               " " | " "22)                         " " | " "39) Play locals audio files ${red}*${reset}              "
+		echo -e " 6) ${bgd}D${reset}eezer Flow       " " | " "23)                         " " | " "40) Play local directories ${red}*${reset}                             "
 		echo -e " 7) ${italic}Edit/add fav here${reset} " " | " "24)                         " " | " "41) Play Shared links                              "
 		echo -e " 8)                   " " | " "25)                         " " | " "42) Play al${bgd}b${reset}ums               "
 		echo -e " 9)                   " " | " "26)                         " " | " "43) Play artists (${bgd}x${reset}) "
@@ -347,7 +363,8 @@ soco() {
 		echo -e "14) m${bgd}u${reset}te OFF          " " | " "31) s${bgd}t${reset}op $device12       " " | " "48) Sha${bgd}z${reset}aaaam        "
 		echo -e "15) volume ${bgd}15${reset}         " " | " "32) Party mode $device12 " " | " "49) S${bgd}w${reset}itch Status Light    "
 		echo -e "16) volume ${bgd}+${reset}          " " | " "33) ${bgd}G${reset}roup status $device12 | " "50) Rename speaker $device12 "
-		echo -e "17) volume ${bgd}-${reset}          " " | " "34) ${bgd}U${reset}ngroup all speakers    " " | " "51) ➔ ${bgd}H${reset}ome     "
+		echo -e "17) volume ${bgd}-${reset}          " " | " "34) Ungroup all speakers    " " | " "51) ➔ ${bgd}H${reset}ome     "
+		echo -e "${red}* Hit CTRL-C to stop current${reset}"
 		echo -e "========================================================================================"
 		echo -e "Enter your menu choice [1-51]: \c "
 		read -e soco_menu
@@ -365,10 +382,10 @@ soco() {
 			11) level_11;;
 			12|m|M) mute_on;;
 			13) level_13;;
-			14) mute_off;;
+			14|u|U) mute_off;;
 			15) level_15;;
-			16|+) vol_+;;
-			17|-) vol_-;;
+			16|+) vol+;;
+			17|-) vol-;;
 			27|o|N) pause;;
 			28|p|P) prev;;
 			29|n|N) next;;
@@ -376,7 +393,7 @@ soco() {
 			31|t|T) stop;;
 			32) party_mode;;
 			33|g|G) groupstatus;;
-			34|u|U) ungroup_all;;
+			34) ungroup_all;;
 			35|i|I) soco_infos $device;;
 			36|l|L) soco_lists $device;;
 			37|a|A) play_radio_from_tunein;;
@@ -390,7 +407,7 @@ soco() {
 			45) play_uri;;
 			46) make_playlist;;
 			36|j|J) sleeep;;
-			37|z|Z) shazam;;
+			37|z|Z) shazaaaam;;
 			38|w|W) led;;
 			39) rename_spk;;
 			40|h|H) exec "$0";;
@@ -602,7 +619,7 @@ play_local_m3u() {
 	playing="Play a local .m3u playlist..."
     echo -e "\n${bold} $playing ${reset}\n"
 
-	# /Users/bruno/Music/Shaka Ponk - Apelogies/CD1/playlist.m3
+	# /Users/bruno/Music/Shaka Ponk - Apelogies/CD1/playlist.m3u
 	
 	# ${directory////\\/}
 	# sed 's/ /\\ /g'
@@ -656,6 +673,9 @@ minfo () {
 
 # play local file (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav)
 # alac in m4v
+# /Users/bruno/Music/The Smile - A Light For Attracting Attention [Japan Edition] (2022)/01. The Same.mp3
+
+# BLOQUANT Ctrl-C to quit
 
 play_local_file() {
 	playing="Play a local audio file..."
@@ -1056,23 +1076,76 @@ sleeep_duration() {
 	}
 
 # Shazaaaam
-shazam() {
+shazaaaam() {
     echo -e "\n${bold} Shazaaaam... ${reset}"
-    shazam
+
+    echo -e "\n${underline}On air:${reset}"
+    
+    on_air="$(shazam)"
+    curr=$(echo -e "$on_air" | sed -n '1p')
+	echo -e "$on_air \n"
+
+	sleep 1.5
+	read -p "< Press Enter >"
+
+	#if [ -z "$playing" ]; then
+   # 	on_air="$(shazam)"
+	#	curr=$(echo -e "$on_air" | sed -n '1p')
+	#	playing="Playing $curr..."
+	#fi
+
+	if [ -n "$curr" ]; then
+    	echo -e "\n${bold} $curr ${reset}"
+    else
+		playing="Shazaaam..."
+		echo -e "\n${bold} $playing ${reset}"
+	fi
 	}
 
 shazam() {
 	sz=$(sonos $loc $device track)
-
-	if [[ "$sz" =~ "Artist" ]]; then artist=$(echo "$sz" | grep "Artist" | awk -F"[=:]" '{print $2}');
-	else artist=""; fi
-
-	if [[ "$sz" =~ "Title" ]]; then title=$(echo "$sz" | grep "Title" | awk -F"[=:]" '{print $2}');
-	else title=""; fi
 	
-	if [[ "$sz" =~ "Album" ]]; then album=$(echo "$sz" | grep "Album" | awk -F"[=:]" '{print $2}');
-	else album=""; fi
+	#echo "$sz"
+	# http://jazzradio.ice.infomaniak.ch/jazzradio-high.aac
+	# https://www.deezer.com/en/playlist/5390258182
+	
+	playback=$(echo "$sz" | sed -n '2p')
+	#echo "$playback"
+	
+	#echo "-------"
+	
+	if [[ "$playback" =~ "Playback is in progress" ]]; then
 
+		if [[ "$sz" =~ "Artist" ]]; then artist=$(echo "$sz" | grep "Artist" | awk -F"[=:]" '{print $2}' | xargs);
+		else artist=""; fi
+
+		if [[ "$sz" =~ "Title" ]]; then title=$(echo "$sz" | grep "Title" | awk -F"[=:]" '{print $2}' | xargs);
+		else title=""; fi
+	
+		if [[ "$sz" =~ "Album" ]]; then album=$(echo "$sz" | grep "Album" | awk -F"[=:]" '{print $2}' | xargs);
+		else album=""; fi
+
+		if [[ "$sz" =~ "Channel" ]]; then channel=$(echo "$sz" | grep "Channel" | awk -F"[=:]" '{print $2}' | xargs);
+		else channel=""; fi
+		
+		if [ -n "$channel" ]; then # non vide => channel existe
+		
+			if [ -n "$artist" ] && [ -n "$title" ]; then
+				# Tune-in / Deezer
+				local shazam="${cyanita}$channel${reset}\n${greenita}$title${reset} of ${greenita}$artist${reset}"
+			else
+				# Favorites radio / radio stream
+				local shazam="${cyanita}$channel${reset}"
+			fi
+			
+		else
+			# shared link deezer / Play local directory
+			local shazam="${greenita}$title${reset} from ${greenita}$album${reset} of ${greenita}$artist${reset}"
+		fi
+		echo "$shazam"
+	fi
+
+: <<'END_COMMENT'
 	result=$( grep -i "uRi" <<< $sz)
 	if [ -n "$result" ]; then
 		uri=$(echo ${sz} | grep "URI" | grep -Eo '(https?|ftp|file)://[-A-Za-z0-9\+&@#/%?=~_|!:,.;]*[-A-Za-z0-9\+&@#/%=~_|]');
@@ -1089,10 +1162,8 @@ shazam() {
 	else
 		shazam="${bold}On air${reset}: ${bold}$title${reset} \033[3mfrom${reset} $album \033[3mof${reset} $artist"
 	fi
+END_COMMENT
 	
-	echo -e "\n $shazam \n"
-	sleep 2.5
-	#read -p "< Press Enter>"
 	}
 
 # Switch status light
