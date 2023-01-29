@@ -284,6 +284,13 @@ help() {
 	echo -e " ${greenbold}16) Remove a track from a Sonos playlist:${reset} remove tracks from the queue. Track numbers start from 1. (single integers, sequences ('4,7,3'), ranges ('5-10')"
 	echo -e " ${greenbold}20) Return:${reset} go to Home menu"
 
+	echo -e "\n${bold}SocoCLI Gui configuration:${reset}"
+	echo -e "${greenbold}see at the beginning of the script...${reset}"
+
+	echo -e " ${greenbold}GITHUB_TOKEN= :${reset} add your Github token (needed to get the soco-cli update)"
+	echo -e " ${greenbold}step=2:${reset} step for up/down volume"
+	echo -e " ${greenbold}default=\"Salon\":${reset} default Sonos device (useful when running ${italic}soco-cli-gui.sh <function>${reset})"
+
 	echo
 	echo -e "$(sonos-discover --docs)"
 	echo -e "\n<Press Enter to quit>"
@@ -531,6 +538,7 @@ pause() {
 	}
 
 # Previous tracks
+# 	No applicable for sonos fav, radios Tune-in
 prev() {
 	backup=$playing
 
@@ -545,6 +553,7 @@ prev() {
 	}
 
 # Next tracks
+# 	No applicable for sonos fav, radios Tune-in
 next() {
 	backup=$playing
 
@@ -560,31 +569,27 @@ next() {
 
 # Party_mode
 party_mode() {
-	playing="Party mode $device..."
-    echo -e "\n${bold} $playing ${reset}"
+    echo -e "\n${bold} Party mode $device... ${reset}"
     sonos $loc $device party_mode
     sonos $loc $device groupstatus && sleep 2
 	}
 
 # Groupstatus
 groupstatus() {
-	playing="Group status $device..."	
-    echo -e "\n${bold} $playing ${reset}"
+    echo -e "\n${bold} Group status $device... ${reset}"
     sonos $loc $device groupstatus && sleep 2
 	}
 
 # Ungroup_all
 ungroup_all() {
-	playing="Ungroup all speakers..."	# <= Shazaaam
-    echo -e "\n${bold} $playing ${reset}"
+    echo -e "\n${bold} Ungroup all speakers... ${reset}"
     sonos $loc $device ungroup_all
     sonos $loc $device groupstatus && sleep 2
 	}
 
 # Rename
 rename_spk() {
-	playing="Rename speaker $device..."	
-    echo -e "\n${bold} $playing ${reset}"
+    echo -e "\n${bold} Rename speaker $device... ${reset}"
     
     read -p "New name: " newname
     sonos $loc $device rename $newname && sleep 2
@@ -596,8 +601,6 @@ rename_spk() {
 	}
 
 vol+() {
-	#playing="Volume +..."
-    #echo -e "\n${bold} $playing ${reset}"
     volume=$(sonos $loc $device volume)
     vol=$((volume+$step))
     sonos $loc $device volume $vol
@@ -605,8 +608,6 @@ vol+() {
 	}
 
 vol-() {
-	#playing="Volume -..."
-    #echo -e "\n${bold} $playing ${reset}"
     volume=$(sonos $loc $device volume)
     vol=$((volume-$step))
     sonos $loc $device volume $vol
