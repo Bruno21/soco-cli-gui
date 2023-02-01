@@ -1122,14 +1122,12 @@ shazaaaam() {
 # 507
 
 shazam() {
-	sz=$(sonos $loc $device track)
+	sz=$(sonos $loc $device -n 1.0 track)
 	
-	#echo "$sz"
 	# http://jazzradio.ice.infomaniak.ch/jazzradio-high.aac
 	# https://www.deezer.com/en/playlist/5390258182
 	
 	playback=$(echo "$sz" | sed -n '2p')
-	#echo "$playback"
 	
 	if [[ "$playback" =~ "Playback is in progress" ]] || [[ "$playback" =~ "Playback is in a transitioning state" ]]; then
 
