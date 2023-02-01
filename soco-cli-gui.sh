@@ -1216,13 +1216,17 @@ soco_lists() {
 	
 	while :
 	do
+		_list="Sonos $device lists Menu "
+		pad=$((((78-${#_list})/2)+${#_list}))
+
 		clear
         echo -e ""
         echo -e "${bold} 🔊 Sonos lists $device ${reset}"
         echo -e ""
 		echo -e " "
 		echo -e "------------------------------------------------------------------------------"
-		echo -e "    Sonos $device lists Menu                                                  "
+		#echo -e "    Sonos $device lists Menu                                                  "
+		printf "%*s\n" $pad "$_list"
 		echo -e "------------------------------------------------------------------------------"
 		echo -e " 1) Favourite radio ${bgd}s${reset}tations " " | " " 11) Create Sonos ${bgd}p${reset}laylist               " " | "
 		echo -e " 2) ${bgd}F${reset}avourites               " " | " " 12) L${bgd}i${reset}st playlists                      " " | "
@@ -1233,7 +1237,7 @@ soco_lists() {
 		echo -e " 7) List ${bgd}a${reset}rtists             " " | " " 17)                                     " " | "
 		echo -e " 8) List al${bgd}b${reset}ums              " " | " " 18)                                     " " | "
 		echo -e " 9)                          " " | " " 19)                                     " " | " 
-		echo -e "10)                          " " | " " 20) ${bgd}H${reset}ome                               " " | "
+		echo -e "10)                          " " | " " 20) ${bgd}H${reset}ome                                " " | "
 		echo -e "=============================================================================="
 		echo -e "Enter your menu choice [1-20]: \c "
 		read lists
@@ -1411,13 +1415,17 @@ soco_infos() {
 	
 	while :
 	do
+		_info="Sonos $device infos Menu"
+		pad=$((((43-${#_info})/2)+${#_info}))
+
 		clear
         echo -e ""
         echo -e "${bold} 🔊 Sonos $device infos ${reset}"
         echo -e ""
 		echo -e " "
 		echo -e "-------------------------------------------"
-		echo -e "    Sonos $device infos Menu      "
+		#echo -e "    Sonos $device infos Menu      "
+		printf "%*s\n" $pad "$_info"
 		echo -e "-------------------------------------------"
 		echo -e " 1) ${bgd}A${reset}larms                              " " | " 
 		echo -e " 2) ${bgd}G${reset}roups                              " " | "
@@ -1525,10 +1533,13 @@ delete_speaker_cache() {
 
 all() {
 	clear
-	cde=""
-	
+
 	while :
 	do
+
+		[ -z $cde ] && cde="Sonos All devices"
+		pad=$((((42-${#cde})/2)+${#cde}))
+
 		clear
         echo -e ""
         echo -e "${bold} 🔊 Sonos All devices ${reset}"
@@ -1536,8 +1547,8 @@ all() {
         echo -e "Below commands apply to all Sonos devices in the network."
 		echo -e ""
 		echo -e "------------------------------------------"
-		echo -e "       Sonos All devices                  "
-		echo -e "  $cde                                    "
+		#echo -e "       Sonos All devices                  "	
+		printf "%*s\n" $pad "$cde"
 		echo -e "------------------------------------------"
 		echo -e " 1) S${bgd}w${reset}itch Status Light OFF            " " | " 
 		echo -e " 2) ${bgd}S${reset}witch Status Light ON             " " | "
@@ -1568,54 +1579,74 @@ all() {
 
 # Switch OFF status light
 all_status_light_off() {
-	cde="Switch OFF status light on All devices..."
-    echo -e "\n${bold} $cde ${reset}"
-
-	sleep 0.5
-	saslof=$(sonos _all_ status_light off | tr '\n' ' ' | xargs)
+	g=""
+	sasasloffslon=$(sonos _all_ status_light off)
+	g=$(echo "$sasloff" | grep -v "OK")
 	
-	cde="Status light is ${bold}OFF${reset} on $saslof devices"
-	echo -e "Status light is ${bold}OFF${reset} on ALL devices"
-	sleep 1.5
+	if [ -z "$g" ]; then
+		mo="ALL devices"
+	else
+		g=$(echo "$sasloff" | grep "OK" | cut -d ':' -f 1 | xargs)
+		mo="$g device"
+	fi 
+	
+	cde="Status light is OFF on $mo"
+	echo -e "\n${bold}$cde${reset}"
+	sleep 2
 	}
 
 # Switch ON status light
 all_status_light_on() {
-	cde="Switch ON status light on All devices..."
-    echo -e "\n${bold} $cde ${reset}"
-
-	sleep 0.5
-	saslon=$(sonos _all_ status_light on | tr '\n' ' ' | xargs)
+	g=""
+	saslon=$(sonos _all_ status_light on)
+	g=$(echo "$saslon" | grep -v "OK")
 	
-	cde="Status light is ${bold}ON${reset} on $saslon devices"
-	echo -e "Status light is ${bold}ON${reset} on ALL devices"
-	sleep 1.5
+	if [ -z "$g" ]; then
+		mo="ALL devices"
+	else
+		g=$(echo "$saslon" | grep "OK" | cut -d ':' -f 1 | xargs)
+		mo="$g device"
+	fi 
+	
+	cde="Status light is ON on $mo"
+	echo -e "\n${bold}$cde${reset}"
+	sleep 2
 	}
 
 # Mute ON 
 all_mute_on() {
-	cde="Mute ON All devices..."
-    echo -e "\n${bold} $cde ${reset}"
-
-	sleep 0.5
-	saslon=$(sonos _all_ mute on | tr '\n' ' ' | xargs)
+	g=""
+	samon=$(sonos _all_ mute on)
+	g=$(echo "$samon" | grep -v "OK")
 	
-	cde="Mute ${bold}ON${reset} $saslon devices"
-	echo -e "Mute ${bold}ON${reset} ALL devices"
-	sleep 1.5
+	if [ -z "$g" ]; then
+		mo="ALL devices"
+	else
+		g=$(echo "$samon" | grep "OK" | cut -d ':' -f 1 | xargs)
+		mo="$g device"
+	fi 
+	
+	cde="Mute ON on $mo"
+	echo -e "\n${bold}$cde${reset}"
+	sleep 2
 	}
 
 # Mute OFF 
 all_mute_off() {
-	cde="Mute OFF All devices..."
-    echo -e "\n${bold} $cde ${reset}"
+	g=""
+	samoff=$(sonos _all_ mute off)
+	g=$(echo "$samoff" | grep -v "OK")
 
-	sleep 0.5
-	saslon=$(sonos _all_ mute off | tr '\n' ' ' | xargs)
-	
-	cde="Mute ${bold}OFF${reset} $saslon devices"
-	echo -e "Mute ${bold}OFF${reset} ALL devices"
-	sleep 1.5
+	if [ -z "$g" ]; then
+		mo="ALL devices"
+	else
+		g=$(echo "$samoff" | grep "OK" | cut -d ':' -f 1 | xargs)
+		mo="$g device"
+	fi 
+
+	cde="Mute OFF on $mo"
+	echo -e "\n${bold}$cde${reset}"
+	sleep 2
 	}
 
 
