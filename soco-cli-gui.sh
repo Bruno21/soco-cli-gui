@@ -1426,15 +1426,16 @@ soco_infos() {
 		printf "%*s\n" $pad "$_info"
 		echo -e "-------------------------------------------"
 		echo -e " 1) ${bgd}A${reset}larms                              " " | " 
-		echo -e " 2) ${bgd}G${reset}roups                              " " | "
-		echo -e " 3) ${bgd}I${reset}nfo                                " " | "
-		echo -e " 4) ${bgd}S${reset}hares                              " " | "
-		echo -e " 5) Reinde${bgd}x${reset} shares                      " " | "
-		echo -e " 6) S${bgd}y${reset}sinfo                             " " | "
-		echo -e " 7) All ${bgd}z${reset}ones                           " " | "
-		echo -e " 8) Re${bgd}f${reset}reshing the Local Speaker List   " " | "
-		echo -e " 9) ${bgd}D${reset}elete the local speaker cache file " " | " 
-		echo -e "10) ${bgd}H${reset}ome                                " " | "
+		echo -e " 2) ${bgd}C${reset}reate alarms                       " " | "
+		echo -e " 3) ${bgd}G${reset}roups                              " " | "
+		echo -e " 4) ${bgd}I${reset}nfo                                " " | "
+		echo -e " 5) ${bgd}S${reset}hares                              " " | "
+		echo -e " 6) Reinde${bgd}x${reset} shares                      " " | "
+		echo -e " 7) S${bgd}y${reset}sinfo                             " " | "
+		echo -e " 8) All ${bgd}z${reset}ones                           " " | "
+		echo -e " 9) Re${bgd}f${reset}reshing the Local Speaker List   " " | "
+		echo -e " 10) ${bgd}D${reset}elete the local speaker cache file " " | " 
+		echo -e " 11) ${bgd}H${reset}ome                                " " | "
 		echo -e "==========================================="
 		echo -e "Enter your menu choice [1-10]: \c "
 		read infos
@@ -1442,15 +1443,16 @@ soco_infos() {
 		case "$infos" in
 
 			1|a|A) alarms;;
-			2|g|G) info_groups;;
-			3|i|I) infos;;
-			4|s|S) shares;;
-			5|x|X) reindex;;
-			6|y|Y) sysinfo;;
-			7|z|Z) all_zones;;
-			8|f|F) refresh_speaker_list;;
-			9|d|D) delete_speaker_cache;;
-			10|h|H) exec "$0";;
+			2|c|C) create_alarms;;
+			3|g|G) info_groups;;
+			4|i|I) infos;;
+			5|s|S) shares;;
+			6|x|X) reindex;;
+			7|y|Y) sysinfo;;
+			8|z|Z) all_zones;;
+			9|f|F) refresh_speaker_list;;
+			10|d|D) delete_speaker_cache;;
+			11|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
 		esac
@@ -1464,6 +1466,121 @@ alarms() {
     echo -e "\n $a \n"
     read -p "< Press Enter>"
 	}
+
+create_alarms() {
+
+	# start time (HH:MM)
+	# duration (HH:MM)
+	# recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD)
+	#	ON_DDDDDD (0=Sun 1=Mon 2=Tue 3=Wen 4 =Thu 5=Fri 6=Sat)
+	#	ON_034 Sunday, Wednesday and Thursday
+	# enabled (ON/OFF , YES/NO)
+	# play (CHIME or URI)
+	# play mode (NORMAL, SHUFFLE_NOREPEAT, SHUFFLE, REPEAT_ALL, REPEAT_ONE, SHUFFLE_REPEAT_ONE)
+	# volume (0 - 100)
+	# grouped speakers (ON/OFF , YES/NO)
+	# 07:00,01:30,WEEKDAYS,ON,"http://stream.live.vc.bbcmedia.co.uk/bbc_radio_fourfm",NORMAL,50,OFF
+
+    echo -e "\n${bold} Create Sonos alarms... ${reset}"
+    echo -e "\n"
+
+   	while :
+	do
+    	read -p "Input start time (HH:MM): " start_time    
+    	REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+    	[[ $start_time =~ $REGEX ]] && break
+ 	done
+
+    while :
+	do
+    	read -p "Input duration (HH:MM): " duration
+    	REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+    	[[ $duration =~ $REGEX ]] && break
+ 	done
+ 
+ 	ddd=""
+    while :
+	do
+    	read -p "Input recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " recurrence
+	    REGEX="DAILY|ONCE|ONCE|WEEKENDS"
+    	if [[ $recurrence =~ $REGEX ]]; then
+    		MATCH0="${BASH_REMATCH[0]}"
+    		break
+    	else
+    		REGEX2="ON_([0-6]{1,6})$"
+    		if [[ $recurrence =~ $REGEX2 ]]; then
+    			MATCH0="${BASH_REMATCH[0]}"   			
+				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
+					dddddd=$(echo "$MATCH0" | awk -F"_" '{print $2}')
+					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
+					[[ $dddddd =~ 1 ]] && ddd+="Monday "
+					[[ $dddddd =~ 2 ]] && ddd+="Tuesday "
+					[[ $dddddd =~ 3 ]] && ddd+="Wednesday "
+					[[ $dddddd =~ 4 ]] && ddd+="Thursday "
+					[[ $dddddd =~ 5 ]] && ddd+="Friday "
+					[[ $dddddd =~ 6 ]] && ddd+="Saturday "
+					
+					read -p "Recurrence: $ddd OK ? (y/n)" rep_alarm
+	    			REGEX="Y|y|O|o"
+    				[[ $rep_alarm =~ $REGEX ]] && break
+ 					ddd=""
+					
+				else echo "Repeated character !"
+				fi
+    		fi
+ 		fi
+ 	done
+    
+   	while :
+	do
+	    read -p "Enable (ON/OFF or YES/NO): " enabled
+	    REGEX="ON|OFF|YES|NO"
+    	[[ $enabled =~ $REGEX ]] && break
+  	done
+   
+    while :
+	do
+    	read -p "Play (CHIME or URI): " to_play
+    	REGEX="CHIME|^(http|https)://"
+    	if [[ $to_play =~ $REGEX ]]; then
+    		#MATCH0="${BASH_REMATCH[0]}"
+    		#echo $MATCH0
+    		#[ $MATCH0 != "CHIME" ] && 
+    		break  		
+ 		fi
+   	done
+   
+    while :
+	do
+	    read -p "Play mode (NORMAL, SHUFFLE_NOREPEAT, SHUFFLE, REPEAT_ALL, REPEAT_ONE, SHUFFLE_REPEAT_ONE): " play_mode
+ 	    REGEX="NORMAL|SHUFFLE_NOREPEAT|SHUFFLE|REPEAT_ALL|REPEAT_ONE|SHUFFLE_REPEAT_ONE"
+    	[[ $play_mode =~ $REGEX ]] && break
+  	done
+   
+   	while :
+	do
+    	read -p "Volume (0 - 100): " volume
+    	if [ $volume -ge 0 ] && [ $volume -le 100 ]; then
+    		break
+ 		fi
+  	done
+    
+   	while :
+	do
+	    read -p "Grouped speakers (ON/OFF , YES/NO): " grouped
+	    REGEX="ON|OFF|YES|NO"
+    	[[ $grouped =~ $REGEX ]] && break
+  	done
+  	
+	alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
+	echo "$alarm_spec"
+	 
+  	#sonos $loc $device create_alarm "$alarm_spec"
+    a=$(sonos $loc $device create_alarm "$alarm_spec")
+    echo -e "\n $a \n"
+    read -p "< Press Enter>"
+  	
+}
 
 # Groups
 info_groups() {
