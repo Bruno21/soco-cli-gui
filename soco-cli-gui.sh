@@ -1552,7 +1552,7 @@ soco_alarms() {
 		echo -e " 3) ${bgd}R${reset}emove alarms                        " " | "
 		echo -e " 4) ${bgd}M${reset}odify alarms                        " " | "
 		echo -e " 5) ${bgd}E${reset}nable/disable alarms                " " | "
-		echo -e " 6)                                      " " | "
+		echo -e " 6) Mo${bgd}v${reset}e alarm                           " " | "
 		echo -e " 7)                                      " " | "
 		echo -e " 8)                                      " " | "
 		echo -e " 9)                                      " " | "
@@ -1568,6 +1568,7 @@ soco_alarms() {
 			3|r|R) remove_alarms;;
 			4|m|M) modify_alarms;;
 			5|e|E) enable_alarms;;
+			6|v|V) move_alarms;;
 			10|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
@@ -1578,10 +1579,310 @@ soco_alarms() {
 # Alarms
 alarms() {
     echo -e "\n${bold} Alarms... ${reset}"
-    a=$(sonos $loc $device alarms)
-    echo -e "\n $a \n"
+
+    list_alarms
+    echo "$court_ala"
+    echo
     read -p "< Press Enter>"
 	}
+
+list_alarms() {
+    long_ala=$(sonos $loc $device alarms)
+	court_ala=$(echo "$long_ala" | cut -d "|" -f 1,2,3,4,5,6,7,8,9)
+
+	#long_ala=$(cat long_alarm.txt)
+	
+}
+
+remove_alarms() {
+    echo -e "\n${bold} Remove alarms... ${reset}"
+    
+    list_alarms
+    echo "$court_ala"
+    echo
+    
+   	while :
+	do    
+    	read -p "Enter the <Alarm ID> alarm to remove or [q] to quit: " trk
+		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
+			break
+		else
+			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
+			if [[ $ala_id =~ "$trk" ]]; then
+				sonos $loc $device remove_alarm $trk
+				[ $? != 0 ] && echo -e "${red}Error !${reset}"
+				break
+			else
+				echo "Wrong <Alarm ID> !"
+			fi
+		fi
+	done
+	
+    read -p "< Press Enter>"
+}
+
+
+move_alarms() {
+    echo -e "\n${bold} Move alarm to speaker... ${reset}"
+    
+    list_alarms
+    echo "$court_ala"
+    echo
+    
+    #y=($((awk '{print $1}' | grep -v $device) <<< $dev))
+   	#echo ${y[@]}
+    
+   	while :
+	do    
+    	read -p "Enter the <Alarm ID> alarm to move or [q] to quit: " trk
+		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
+			break
+		else
+			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
+			if [[ $ala_id =~ "$trk" ]]; then
+			
+				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
+				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
+
+				read -p "Move Alarm ID <$trk> to Speaker <$other_speakers> (enter target name): " target
+				if [[ $other_speakers =~ "$target" ]]; then
+					sonos $loc $target move_alarm $trk
+					[ $? != 0 ] && echo -e "${red}Error !${reset}"
+					break
+				else echo "Wrong target name !"
+				fi
+			else
+				echo "Wrong <Alarm ID> !"
+			fi
+		fi
+	done
+	
+    read -p "< Press Enter>"
+}
+
+spec() {
+
+	echo "--"
+	echo "$1"
+	echo "$2"
+	echo "$3"
+	echo "$4"
+	echo "$5"
+	echo "$6"
+	echo "$7"
+	echo "$8"
+	echo "--"
+	
+   	while :
+	do
+    	read -e -p "Input start time (HH:MM): " -i $1 start_time 
+    	REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+    	#[[ $start_time == "_" ]] && break
+    	#[[ $start_time =~ $REGEX ]] && break
+    	[[ $start_time == "_" ]] || [[ $start_time =~ $REGEX ]] && break
+ 	done
+
+    while :
+	do
+    	read -e -p "Input duration (HH:MM): " -i $2 duration
+    	REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+    	#[[ $duration == "_" ]] && break
+    	#[[ $duration =~ $REGEX ]] && break
+    	[[ $duration == "_" ]] || [[ $duration =~ $REGEX ]] && break
+ 	done
+ 
+ 	ddd=""
+    while :
+	do
+    	read -e -p "Input recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " -i $3 recurrence
+	    REGEX="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
+	    [[ $recurrence == "_" ]] && break
+    	if [[ $recurrence =~ $REGEX ]]; then
+    		MATCH0="${BASH_REMATCH[0]}"
+    		break
+    	else
+    		REGEX2="ON_([0-6]{1,6})$"
+    		if [[ $recurrence =~ $REGEX2 ]]; then
+    			MATCH0="${BASH_REMATCH[0]}"   			
+				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
+					dddddd=$(echo "$MATCH0" | awk -F"_" '{print $2}')
+					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
+					[[ $dddddd =~ 1 ]] && ddd+="Monday "
+					[[ $dddddd =~ 2 ]] && ddd+="Tuesday "
+					[[ $dddddd =~ 3 ]] && ddd+="Wednesday "
+					[[ $dddddd =~ 4 ]] && ddd+="Thursday "
+					[[ $dddddd =~ 5 ]] && ddd+="Friday "
+					[[ $dddddd =~ 6 ]] && ddd+="Saturday "
+					
+					read -p "Recurrence: $ddd OK ? (y/n)" rep_alarm
+	    			REGEX3="Y|y|O|o"
+    				[[ $rep_alarm =~ $REGEX3 ]] && break
+ 					ddd=""
+					
+				else echo "Repeated character !"
+				fi
+    		fi
+ 		fi
+ 	done
+    
+   	while :
+	do
+	    read -e -p "Enable (ON/OFF or YES/NO): " -i $4 enabled
+	    REGEX="ON|OFF|YES|NO"
+    	[[ $enabled =~ $REGEX ]] || [[ $enabled == "_" ]] && break
+  	done
+   
+   echo $5
+   
+    while :
+	do
+    	read -e -p "Play (CHIME or URI): " -i "$5" to_play
+    	REGEX="CHIME|^(http|https)://"
+    	#if [[ $to_play =~ $REGEX ]]; then
+    	if [[ $to_play =~ $REGEX ]] || [[ $to_play == "_" ]]; then
+    		#MATCH0="${BASH_REMATCH[0]}"
+    		#echo $MATCH0
+    		#[ $MATCH0 != "CHIME" ] && 
+    		break  		
+ 		fi
+   	done
+   
+    while :
+	do
+	    read -e -p "Play mode (NORMAL, SHUFFLE_NOREPEAT, SHUFFLE, REPEAT_ALL, REPEAT_ONE, SHUFFLE_REPEAT_ONE): " -i $6 play_mode
+ 	    REGEX="NORMAL|SHUFFLE_NOREPEAT|SHUFFLE|REPEAT_ALL|REPEAT_ONE|SHUFFLE_REPEAT_ONE"
+    	[[ $play_mode =~ $REGEX ]] || [[ $play_mode == "_" ]] && break
+  	done
+   
+   	while :
+	do
+    	read -e -p "Volume (0 - 100): " -i $7 volume
+    	[ $volume == "_" ] && break
+    	if [ $volume -ge 0 ] && [ $volume -le 100 ]; then
+    		break
+    	else echo "Enter a number betwenn 0 and 100 !"
+ 		fi
+  	done
+    
+   	while :
+	do
+	    read -e -p "Grouped speakers (ON/OFF , YES/NO): " -i $8 grouped
+	    REGEX="ON|OFF|YES|NO"
+    	[[ $grouped =~ $REGEX ]] && break
+  	done
+
+	#alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
+
+	#start_time="_"
+	#duration="_"
+	alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
+
+}
+
+modify_alarms() {
+    echo -e "\n${bold} Modify alarms... ${reset}"
+    
+    list_alarms
+    echo "$court_ala"
+    echo
+    
+   	while :
+	do    
+    	read -p "Enter the <Alarm ID> alarm to modify or [q] to quit: " trk
+		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
+			break
+		else
+			ala=$(echo "$court_ala" | sed '1,3d')
+			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
+			if [[ $ala_id =~ "$trk" ]]; then
+			
+				to_modify=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3","$4","$5","$6","$7","$8","$9","$10","$11}' | xargs | sed 's/ , /,/g')
+				echo "$to_modify"
+				
+				# Avant modif
+				# Chambre,06:00,00:30,WEEKDAYS,No,France Inter 95.9 (Émissions-débats France),SHUFFLE,25,No
+				
+				IFS=, read -a ids <<< "${to_modify}"
+				
+				speaker="${ids[0]}"
+				start_time="${ids[1]}"
+				duration="${ids[2]}"
+				recurrence="${ids[3]}"
+				enabled="${ids[4]^^}"
+				to_play="\"${ids[5]}\""
+				play_mode="${ids[6]}"
+				volume="${ids[7]}"
+				grouped="${ids[8]^^}"
+
+: <<'END_COMMENT2'				
+				echo "$speaker"
+				echo "$start_time"
+				echo "$duration"
+				echo "$recurrence"
+				echo "$enabled"
+				echo "$to_play"	#
+				
+				#get_uri
+				
+				echo "$play_mode"
+				echo "$volume"
+				echo "$grouped"
+				echo
+END_COMMENT2				
+				spec $start_time $duration $recurrence $enabled "$to_play" $play_mode $volume $grouped
+				
+				
+				# 07:00,01:30,WEEKDAYS,ON,"http://stream.live.vc.bbcmedia.co.uk/bbc_radio_fourfm",NORMAL,50,OFF
+   				
+   				echo $alarm_spec
+   				# 06:00,00:30,WEEKDAYS,NO,CHIME,SHUFFLE,25,ON
+   				
+   				# https://jazzradio.ice.infomaniak.ch/frequencejazz-high.mp3
+   				
+   				sonos $loc $device modify_alarm $trk $alarm_spec
+				[ $? != 0 ] && echo -e "${red}Error !${reset}"
+
+				break
+			else
+				echo "Wrong <Alarm ID> !"
+			fi
+		fi
+	done
+
+    read -p "< Press Enter>"
+}
+
+enable_alarms() {
+    echo -e "\n${bold} Enable alarms... ${reset}"
+
+    list_alarms
+    echo "$court_ala"
+    echo
+    
+   	while :
+	do    
+    	read -p "Enter the <Alarm ID> alarm to enable/disable or [q] to quit: " trk
+		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
+			break
+		else
+			ala=$(echo "$court_ala" | sed '1,3d')
+			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
+			if [[ $ala_id =~ "$trk" ]]; then
+				enabled=$(echo "$ala" | awk -F "|" -v var="$trk" '($2 == var) {print $7}' | xargs)
+				case $enabled in
+				Yes) sonos $loc $device disable_alarm $trk;;
+				No) sonos $loc $device enable_alarm $trk;;
+				esac
+				[ $? != 0 ] && echo -e "${red}Error !${reset}"
+				break
+			else
+				echo "Wrong <Alarm ID> !"
+			fi
+		fi
+	done
+
+    read -p "< Press Enter>"
+}
 
 create_alarms() {
 
@@ -1599,6 +1900,10 @@ create_alarms() {
 
     echo -e "\n${bold} Create Sonos alarms... ${reset}"
     echo -e "\n"
+
+    list_alarms
+    echo "$court_ala"
+    echo
 
    	while :
 	do
@@ -1618,7 +1923,7 @@ create_alarms() {
     while :
 	do
     	read -p "Input recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " recurrence
-	    REGEX="DAILY|ONCE|ONCE|WEEKENDS"
+	    REGEX="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
     	if [[ $recurrence =~ $REGEX ]]; then
     		MATCH0="${BASH_REMATCH[0]}"
     		break
@@ -1659,9 +1964,9 @@ create_alarms() {
     	read -p "Play (CHIME or URI): " to_play
     	REGEX="CHIME|^(http|https)://"
     	if [[ $to_play =~ $REGEX ]]; then
-    		#MATCH0="${BASH_REMATCH[0]}"
-    		#echo $MATCH0
-    		#[ $MATCH0 != "CHIME" ] && 
+    		MATCH0="${BASH_REMATCH[0]}"
+    		echo $MATCH0
+    		[ $MATCH0 != "CHIME" ] && to_play="\"$to_play\""
     		break  		
  		fi
    	done
@@ -1689,11 +1994,11 @@ create_alarms() {
   	done
   	
 	alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
-	echo "$alarm_spec"
+	echo -e "\nalarm_spec: $alarm_spec"
 	 
   	#sonos $loc $device create_alarm "$alarm_spec"
     a=$(sonos $loc $device create_alarm "$alarm_spec")
-    echo -e "\n $a \n"
+    echo -e "\n $a \n"			# vide
     read -p "< Press Enter>"
   	
 }
