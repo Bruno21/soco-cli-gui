@@ -35,6 +35,9 @@ GITHUB_TOKEN=
 # Step up/down volume
 step=2
 
+# Default snooze alarm duration
+default_snooze=10	# 10 minutes
+
 # Default Sonos device
 default="Salon"
 
@@ -1553,7 +1556,7 @@ soco_alarms() {
 		echo -e " 4) ${bgd}M${reset}odify alarms                        " " | "
 		echo -e " 5) ${bgd}E${reset}nable/disable alarms                " " | "
 		echo -e " 6) Mo${bgd}v${reset}e alarm                           " " | "
-		echo -e " 7)                                      " " | "
+		echo -e " 7) Snoo${bgd}z${reset}e alarm                         " " | "
 		echo -e " 8)                                      " " | "
 		echo -e " 9)                                      " " | "
 		echo -e " 10) ${bgd}H${reset}ome                                " " | "
@@ -1569,6 +1572,7 @@ soco_alarms() {
 			4|m|M) modify_alarms;;
 			5|e|E) enable_alarms;;
 			6|v|V) move_alarms;;
+			7|z|Z) snooze_alarms;;
 			10|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
@@ -1621,6 +1625,34 @@ remove_alarms() {
     read -p "< Press Enter>"
 }
 
+snooze_alarms() {
+    echo -e "\n${bold} Snooze alarm... ${reset}"
+    
+    echo
+    
+    while :
+	do
+    	read -e -p "Enter the <Snooze duration> or [q] to quit: " -i $default_snooze snooze
+
+		if [[ "$snooze" == "q" || "$snooze" == "Q" ]]; then 
+			break
+		else
+    		REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"		# HH:MN
+    		if [[ $snooze =~ $REGEX ]]; then
+    			snooze="$snooze:00"
+    			break
+    		elif [ $snooze -ge 0 ] && [ $snooze -le 180 ]; then
+    			break
+    		else
+    			echo "Wrong Snooze duration !"
+    			echo "Must be: <N> minutes between 0 and 180, or <HH:MM:SS> duration"
+    		fi
+    	fi
+ 	done
+
+	echo $snooze
+    #sonos $loc $device snooze_alarm $snooze
+}
 
 move_alarms() {
     echo -e "\n${bold} Move alarm to speaker... ${reset}"
@@ -1814,21 +1846,6 @@ modify_alarms() {
 				volume="${ids[7]}"
 				grouped="${ids[8]^^}"
 
-: <<'END_COMMENT2'				
-				echo "$speaker"
-				echo "$start_time"
-				echo "$duration"
-				echo "$recurrence"
-				echo "$enabled"
-				echo "$to_play"	#
-				
-				#get_uri
-				
-				echo "$play_mode"
-				echo "$volume"
-				echo "$grouped"
-				echo
-END_COMMENT2				
 				spec $start_time $duration $recurrence $enabled "$to_play" $play_mode $volume $grouped
 				
 				
@@ -2131,11 +2148,14 @@ list_functions=$(declare -F | awk '{print $NF}' | sort | grep -E -v "^_")
 help_functions(){
 	echo -e "${bold}List of functions:${reset}"
 	echo "$list_functions" | column
-	#echo "$list_functions"
+	#echo "$list_functions" > list_functions.txt
 }
 
 cli_help(){
 	echo -e "${bold}Help soco-cli-gui:${reset}"
+	echo
+	echo "-f	Display list of functions"
+	echo "-h	Display this help"
 	echo
 	echo "Run soco-cli-gui.sh <function> (eg. soco-cli-gui.sh deezer_flow)"
 	echo
@@ -2212,6 +2232,15 @@ cli_help(){
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_track_from_library" "Search track in library -> add to queue -> play."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_uri" "Plays the audio object given by the <uri> parameter (e.g., a radio stream URL)"
 
+	echo -e "\n${greenbold}Alarms${reset}"
+	printf "| ${bold}%-25s${reset} | %-126s \n" "alarms" "List all of the alarms in the Sonos system."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "create_alarms" "Creates a new alarm for the target speaker, according to the <alarm_spec>."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "enable_alarms" "Enables an existing alarm or alarms."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "modify_alarms" "Modifies an existing alarm or alarms, according to the <alarm_spec> format (with underscores for values to be left unchanged)."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "move_alarms" "Move the alarm with ID <alarm_id> to the target speaker."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "remove_alarms" "Removes one or more alarms by their alarm IDs."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "snooze_alarms" "Snooze an alarm that's already playing on the target speaker."
+
 	echo -e "\n${greenbold}Lists${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "list_albums" "Lists all the albums in the music library."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "list_all_playlist_tracks" "Lists all tracks in all Sonos Playlists."
@@ -2236,6 +2265,7 @@ cli_help(){
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all_zones" "Prints a simple list of comma separated visible zone/room names. Use all_zones (or all_rooms) to return all devices including ones not visible in the Sonos controller apps."
 
 	echo -e "\n${greenbold}Menus${reset}"
+	printf "| ${bold}%-25s${reset} | %-126s \n" "soco_alarms" "Sonos alarms Menu."	
 	printf "| ${bold}%-25s${reset} | %-126s \n" "soco_infos" "Sonos infos Menu."	
 	printf "| ${bold}%-25s${reset} | %-126s \n" "soco_lists" "Sonos lists Menu."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all" "Sonos _all_ Menu."	
