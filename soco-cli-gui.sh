@@ -1592,10 +1592,8 @@ alarms() {
 
 list_alarms() {
     long_ala=$(sonos $loc $device alarms)
+    #long_ala=$(cat long_alarm.txt)
 	court_ala=$(echo "$long_ala" | cut -d "|" -f 1,2,3,4,5,6,7,8,9)
-
-	#long_ala=$(cat long_alarm.txt)
-	
 }
 
 remove_alarms() {
@@ -1604,6 +1602,7 @@ remove_alarms() {
     list_alarms
     echo "$court_ala"
     echo
+    j=""
     
    	while :
 	do    
@@ -1611,11 +1610,41 @@ remove_alarms() {
 		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
 			break
 		else
-			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
-			if [[ $ala_id =~ "$trk" ]]; then
-				sonos $loc $device remove_alarm $trk
+			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')
+			h=$(echo "$trk" | sed 's/,/ /g')
+			for i in ${h}
+			do
+				echo "$i"
+				[[ $ala_id =~ "$i" ]] && j+="$i,"
+			done
+			j=$(echo "$j" | sed 's/,$//')
+			echo "j:--$j--"
+			echo ${#j}
+			echo "trk:--$trk--"
+			echo ${#trk}
+					
+			if [[ $ala_id =~ "$trk" ]] || [[ $trk == "all" ]] || [ -n $j ]; then
+			#if [[ $ala_id =~ "$trk" ]] || [[ $trk == "all" ]]; then
+				echo "---"
+				echo "les 3 conditions:"
+				echo $trk
+				echo $j
+				echo "---"
+				#[[ $trk == "all" ]]; then
+				if [ -n $j ]; then
+					trk=$j
+					echo "j non vide"
+					echo $trk
+				elif [ -n $j ] && [[ $trk == "all" ]]; then
+					trk="all"
+					echo "j non vide ET trk=all"
+				fi
+				echo "remove_alarm $trk"
+				#sonos $loc $device remove_alarm $trk
 				[ $? != 0 ] && echo -e "${red}Error !${reset}"
 				break
+			elif [ -z $j ]; then
+				echo "Wrong <Alarm ID> serie !"
 			else
 				echo "Wrong <Alarm ID> !"
 			fi
@@ -1632,26 +1661,32 @@ snooze_alarms() {
     
     while :
 	do
-    	read -e -p "Enter the <Snooze duration> or [q] to quit: " -i $default_snooze snooze
+    	read -e -p "Enter the <Snooze duration> (<min> or HH:MM) or [q] to quit: " -i $default_snooze snooze
 
 		if [[ "$snooze" == "q" || "$snooze" == "Q" ]]; then 
+			snooze=""
 			break
 		else
     		REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"		# HH:MN
     		if [[ $snooze =~ $REGEX ]]; then
     			snooze="$snooze:00"
     			break
-    		elif [ $snooze -ge 0 ] && [ $snooze -le 180 ]; then
+    		elif [[ $snooze =~ ^-?[0-9]+$ ]] && [ $snooze -ge 1 ] && [ $snooze -le 180 ]; then
     			break
     		else
     			echo "Wrong Snooze duration !"
-    			echo "Must be: <N> minutes between 0 and 180, or <HH:MM:SS> duration"
-    		fi
+    			echo -e "Must be: <N> minutes between 1 and 180, or <HH:MM> duration\n"
+    			snooze=""
+    		fi 		  		
     	fi
+    	
  	done
 
-	echo $snooze
-    #sonos $loc $device snooze_alarm $snooze
+    	if [ -n "$snooze" ]; then
+     		sonos $loc $device snooze_alarm $snooze
+    		[ $? != 0 ] && echo -e "${red}Error !${reset}"
+    	fi
+    
 }
 
 move_alarms() {
@@ -1675,8 +1710,9 @@ move_alarms() {
 			
 				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
 				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
-
-				read -p "Move Alarm ID <$trk> to Speaker <$other_speakers> (enter target name): " target
+				other="${other_speakers[@]}"
+				
+				read -e -p "Move Alarm ID <$trk> to Speaker <$other> (enter target name): " -i ${other_speakers[0]} target
 				if [[ $other_speakers =~ "$target" ]]; then
 					sonos $loc $target move_alarm $trk
 					[ $? != 0 ] && echo -e "${red}Error !${reset}"
@@ -1689,7 +1725,8 @@ move_alarms() {
 		fi
 	done
 	
-    read -p "< Press Enter>"
+	sleep 1
+   # read -p "< Press Enter>"
 }
 
 spec() {
@@ -2214,7 +2251,7 @@ cli_help(){
 
 	echo -e "\n${greenbold}Infos / Help${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "about" "About soco-cli-gui"
-	printf "| ${bold}%-25s${reset} | %-126s \n" "help" "Help"
+	printf "| ${bold}%-25s${reset} | %-126s \n" "help" "Help soco-cli-gui"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "inform" "Device informations"
 	#printf "| ${bold}%-25s${reset} | %-126s \n" "minfo" ""
 	printf "| ${bold}%-25s${reset} | %-126s \n" "sysinfo" "Prints a table of information about all speakers in the system."
