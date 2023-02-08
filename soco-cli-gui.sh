@@ -41,7 +41,13 @@ default_snooze=10	# 10 minutes
 # Default Sonos device
 default="Salon"
 
+fzf_bin=0
+
 device=""
+
+if (! type fzf > /dev/null 2>&1); then fzf_bin=0
+else fzf_bin=1
+fi
 
 devices() {
 	discover=$(sonos-discover -p 2>/dev/null)
@@ -1591,8 +1597,8 @@ alarms() {
 	}
 
 list_alarms() {
-    long_ala=$(sonos $loc $device alarms)
-    #long_ala=$(cat long_alarm.txt)
+    #long_ala=$(sonos $loc $device alarms)
+    long_ala=$(cat long_alarm.txt)
 	court_ala=$(echo "$long_ala" | cut -d "|" -f 1,2,3,4,5,6,7,8,9)
 }
 
@@ -1603,6 +1609,7 @@ remove_alarms() {
     echo "$court_ala"
     echo
     j=""
+    k=""
     
    	while :
 	do    
@@ -1611,47 +1618,46 @@ remove_alarms() {
 			break
 		else
 			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')
+			# suite d'<alarm id>
 			h=$(echo "$trk" | sed 's/,/ /g')
 			for i in ${h}
 			do
-				echo "$i"
 				[[ $ala_id =~ "$i" ]] && j+="$i,"
+				[[ ! $ala_id =~ "$i" ]] && k+="$i,"
 			done
 			j=$(echo "$j" | sed 's/,$//')
-			echo "j:--$j--"
-			echo ${#j}
-			echo "trk:--$trk--"
-			echo ${#trk}
-					
-			if [[ $ala_id =~ "$trk" ]] || [[ $trk == "all" ]] || [ -n $j ]; then
-			#if [[ $ala_id =~ "$trk" ]] || [[ $trk == "all" ]]; then
-				echo "---"
-				echo "les 3 conditions:"
-				echo $trk
-				echo $j
-				echo "---"
-				#[[ $trk == "all" ]]; then
-				if [ -n $j ]; then
+			k=$(echo "$k" | sed 's/,$//')
+			
+			if [[ $ala_id =~ "$trk" ]] || [[ $trk == "all" ]] || [ -n "$j" ]; then	# j non vide
+
+				if [ -n "$j" ]; then
 					trk=$j
-					echo "j non vide"
-					echo $trk
-				elif [ -n $j ] && [[ $trk == "all" ]]; then
+				elif [ -n "$j" ] && [[ $trk == "all" ]]; then
 					trk="all"
-					echo "j non vide ET trk=all"
 				fi
-				echo "remove_alarm $trk"
-				#sonos $loc $device remove_alarm $trk
+				echo "Remove alarm with <Alarm ID> $trk"
+				[ -n "$k" ] && echo "No <Alarm ID> $k !"
+				sonos $loc $device remove_alarm $trk
 				[ $? != 0 ] && echo -e "${red}Error !${reset}"
 				break
-			elif [ -z $j ]; then
-				echo "Wrong <Alarm ID> serie !"
 			else
 				echo "Wrong <Alarm ID> !"
 			fi
+
 		fi
 	done
 	
-    read -p "< Press Enter>"
+	# 1 4 19 23 25 43 44 45
+	# Enter 45 -> remove_alarm 45				OK
+	# Enter 46 -> Wrong <Alarm ID>  !    		OK
+	# Enter 44,45 -> remove_alarm 44,45			OK
+	# Enter q	> quit							OK
+	# Enter aa -> Wrong <Alarm ID>  !			OK
+	# Enter all -> remove_alarm all				OK
+	# Enter 45,46 -> remove_alarm 45		OK
+	
+	sleep 1
+    #read -p "< Press Enter>"
 }
 
 snooze_alarms() {
@@ -1682,10 +1688,10 @@ snooze_alarms() {
     	
  	done
 
-    	if [ -n "$snooze" ]; then
-     		sonos $loc $device snooze_alarm $snooze
-    		[ $? != 0 ] && echo -e "${red}Error !${reset}"
-    	fi
+    if [ -n "$snooze" ]; then
+     	sonos $loc $device snooze_alarm $snooze
+    	[ $? != 0 ] && echo -e "${red}Error !${reset}"
+    fi
     
 }
 
@@ -1729,7 +1735,7 @@ move_alarms() {
    # read -p "< Press Enter>"
 }
 
-spec() {
+al_spec() {
 
 	echo "--"
 	echo "$1"
@@ -1745,34 +1751,34 @@ spec() {
    	while :
 	do
     	read -e -p "Input start time (HH:MM): " -i $1 start_time 
-    	REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+    	REGEX1="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
     	#[[ $start_time == "_" ]] && break
     	#[[ $start_time =~ $REGEX ]] && break
-    	[[ $start_time == "_" ]] || [[ $start_time =~ $REGEX ]] && break
+    	[[ $start_time == "_" ]] || [[ $start_time =~ $REGEX1 ]] && break
  	done
 
     while :
 	do
     	read -e -p "Input duration (HH:MM): " -i $2 duration
-    	REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+    	REGEX2="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
     	#[[ $duration == "_" ]] && break
     	#[[ $duration =~ $REGEX ]] && break
-    	[[ $duration == "_" ]] || [[ $duration =~ $REGEX ]] && break
+    	[[ $duration == "_" ]] || [[ $duration =~ $REGEX2 ]] && break
  	done
  
  	ddd=""
     while :
 	do
     	read -e -p "Input recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " -i $3 recurrence
-	    REGEX="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
+	    REGEX3="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
 	    [[ $recurrence == "_" ]] && break
-    	if [[ $recurrence =~ $REGEX ]]; then
-    		MATCH0="${BASH_REMATCH[0]}"
+    	if [[ $recurrence =~ $REGEX3 ]]; then
+    		MATCH3="${BASH_REMATCH[0]}"
     		break
     	else
-    		REGEX2="ON_([0-6]{1,6})$"
-    		if [[ $recurrence =~ $REGEX2 ]]; then
-    			MATCH0="${BASH_REMATCH[0]}"   			
+    		REGEX32="ON_([0-6]{1,6})$"
+    		if [[ $recurrence =~ $REGEX32 ]]; then
+    			MATCH32="${BASH_REMATCH[0]}"   			
 				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
 					dddddd=$(echo "$MATCH0" | awk -F"_" '{print $2}')
 					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
@@ -1784,8 +1790,8 @@ spec() {
 					[[ $dddddd =~ 6 ]] && ddd+="Saturday "
 					
 					read -p "Recurrence: $ddd OK ? (y/n)" rep_alarm
-	    			REGEX3="Y|y|O|o"
-    				[[ $rep_alarm =~ $REGEX3 ]] && break
+	    			REGEX33="Y|y|O|o"
+    				[[ $rep_alarm =~ $REGEX33 ]] && break
  					ddd=""
 					
 				else echo "Repeated character !"
@@ -1797,21 +1803,21 @@ spec() {
    	while :
 	do
 	    read -e -p "Enable (ON/OFF or YES/NO): " -i $4 enabled
-	    REGEX="ON|OFF|YES|NO"
-    	[[ $enabled =~ $REGEX ]] || [[ $enabled == "_" ]] && break
+	    REGEX4="ON|OFF|YES|NO"
+    	[[ $enabled =~ $REGEX4 ]] || [[ $enabled == "_" ]] && break
   	done
    
-   echo $5
+   uri=$(echo $5 | sed 's/\"//g')
    
     while :
 	do
-    	read -e -p "Play (CHIME or URI): " -i "$5" to_play
-    	REGEX="CHIME|^(http|https)://"
+    	read -e -p "Play (CHIME or URI): " -i "$uri" to_play
+    	REGEX5="CHIME|^(http|https)://"
     	#if [[ $to_play =~ $REGEX ]]; then
-    	if [[ $to_play =~ $REGEX ]] || [[ $to_play == "_" ]]; then
-    		#MATCH0="${BASH_REMATCH[0]}"
-    		#echo $MATCH0
-    		#[ $MATCH0 != "CHIME" ] && 
+    	if [[ $to_play =~ $REGEX5 ]] || [[ $to_play == "_" ]]; then
+    		MATCH5="${BASH_REMATCH[0]}"
+    		echo $MATCH5
+    		[ $MATCH5 != "CHIME" ] && to_play="\"$to_play\""
     		break  		
  		fi
    	done
@@ -1819,8 +1825,8 @@ spec() {
     while :
 	do
 	    read -e -p "Play mode (NORMAL, SHUFFLE_NOREPEAT, SHUFFLE, REPEAT_ALL, REPEAT_ONE, SHUFFLE_REPEAT_ONE): " -i $6 play_mode
- 	    REGEX="NORMAL|SHUFFLE_NOREPEAT|SHUFFLE|REPEAT_ALL|REPEAT_ONE|SHUFFLE_REPEAT_ONE"
-    	[[ $play_mode =~ $REGEX ]] || [[ $play_mode == "_" ]] && break
+ 	    REGEX6="NORMAL|SHUFFLE_NOREPEAT|SHUFFLE|REPEAT_ALL|REPEAT_ONE|SHUFFLE_REPEAT_ONE"
+    	[[ $play_mode =~ $REGEX6 ]] || [[ $play_mode == "_" ]] && break
   	done
    
    	while :
@@ -1836,16 +1842,11 @@ spec() {
    	while :
 	do
 	    read -e -p "Grouped speakers (ON/OFF , YES/NO): " -i $8 grouped
-	    REGEX="ON|OFF|YES|NO"
-    	[[ $grouped =~ $REGEX ]] && break
+	    REGEX8="ON|OFF|YES|NO"
+    	[[ $grouped =~ $REGEX8 ]] || [[ $grouped == "_" ]] && break
   	done
 
-	#alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
-
-	#start_time="_"
-	#duration="_"
 	alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
-
 }
 
 modify_alarms() {
@@ -1866,7 +1867,8 @@ modify_alarms() {
 			if [[ $ala_id =~ "$trk" ]]; then
 			
 				to_modify=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3","$4","$5","$6","$7","$8","$9","$10","$11}' | xargs | sed 's/ , /,/g')
-				echo "$to_modify"
+				
+				echo "to_modify: $to_modify"
 				
 				# Avant modif
 				# Chambre,06:00,00:30,WEEKDAYS,No,France Inter 95.9 (Émissions-débats France),SHUFFLE,25,No
@@ -1882,8 +1884,10 @@ modify_alarms() {
 				play_mode="${ids[6]}"
 				volume="${ids[7]}"
 				grouped="${ids[8]^^}"
+				
+				echo ${ids[@]}
 
-				spec $start_time $duration $recurrence $enabled "$to_play" $play_mode $volume $grouped
+				al_spec $start_time $duration $recurrence $enabled "$to_play" $play_mode $volume $grouped
 				
 				
 				# 07:00,01:30,WEEKDAYS,ON,"http://stream.live.vc.bbcmedia.co.uk/bbc_radio_fourfm",NORMAL,50,OFF
@@ -1935,7 +1939,7 @@ enable_alarms() {
 		fi
 	done
 
-    read -p "< Press Enter>"
+    sleep 1
 }
 
 create_alarms() {
@@ -1959,34 +1963,84 @@ create_alarms() {
     echo "$court_ala"
     echo
 
+	declare -A radio_uri
+	radio_uri=(['France Info']="http://icecast.radiofrance.fr/franceinfo-midfi.mp3"
+	['France Inter']="http://icecast.radiofrance.fr/franceinter-midfi.mp3"
+	['RTL']="https://streamer-02.rtl.fr/rtl-1-44-128"
+	['Classic FM']="https://classicfm.ice.infomaniak.ch/classic-fm.mp3"
+	['FIP Jazz']="https://icecast.radiofrance.fr/fipjazz-midfi.mp3"
+	['FIP Metal']="https://icecast.radiofrance.fr/fipmetal-midfi.mp3"
+	['FIP Reggae']="https://icecast.radiofrance.fr/fipreggae-midfi.mp3"
+	['FIP Rock']="https://icecast.radiofrance.fr/fiprock-midfi.mp3"
+	['France Bleue Bourgone']="https://icecast.radiofrance.fr/fbbourgogne-midfi.mp3"
+	['France Culture']="https://icecast.radiofrance.fr/franceculture-midfi.mp3"
+	['France Musique']="https://icecast.radiofrance.fr/francemusique-midfi.mp3"
+	['Frequence Jazz']="https://jazzradio.ice.infomaniak.ch/frequencejazz-high.mp3"
+	['Jazz Blues']="https://jazzblues.ice.infomaniak.ch/jazzblues-high.mp3"
+	['Le Mouv']="https://icecast.radiofrance.fr/mouv-midfi.mp3"
+	['RFM']="https://stream.rfm.fr/rfm.mp3"
+	['Soma FM']="http://ice2.somafm.com/indiepop-128-aac"
+	['Radio Classique']="http://radioclassique.ice.infomaniak.ch/radioclassique-high.mp3"
+	['Party Viber Radio']="http://www.partyviberadio.com:8020/listen.pls"
+	['*CHIME*']="CHIME")
+	
+	fzf_recurrence=("DAILY" "ONCE" "WEEKDAYS" "WEEKENDS" "ON_DDDDDD")
+	fzf_play_mode=("NORMAL" "SHUFFLE_NOREPEAT" "SHUFFLE" "REPEAT_ALL" "REPEAT_ONE" "SHUFFLE_REPEAT_ONE")
+	fzf_yes_no=("ON" "OFF" "YES" "NO")
+
+	
+	fzf_args=(
+	--height=8
+	--info=hidden
+    --with-nth=2..
+    --layout=reverse
+    --bind=change:clear-query
+    --border
+	)
+
+#    --prompt='Play'
+#    --header="${header:1}"
+	
+	echo
+
+	shopt -s nocasematch
+
    	while :
 	do
     	read -p "Input start time (HH:MM): " start_time    
-    	REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
-    	[[ $start_time =~ $REGEX ]] && break
+    	REGEX1="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+    	[[ $start_time =~ $REGEX1 ]] && break
  	done
 
     while :
 	do
     	read -p "Input duration (HH:MM): " duration
-    	REGEX="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
-    	[[ $duration =~ $REGEX ]] && break
+    	REGEX2="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
+    	[[ $duration =~ $REGEX2 ]] && break
  	done
+
+ 	if [ $fzf_bin -eq 1 ]; then
+ 		header=" Input recurrence"
+ 		prompt="Input recurrence"
+ 		
+   		choice=$(printf "Play %s\n" "${fzf_recurrence[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+		recurrence_fzf=${choice:5}
+ 	fi
  
  	ddd=""
     while :
 	do
-    	read -p "Input recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " recurrence
-	    REGEX="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
-    	if [[ $recurrence =~ $REGEX ]]; then
-    		MATCH0="${BASH_REMATCH[0]}"
+    	read -e -p "Input recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " -i "$recurrence_fzf" recurrence
+	    REGEX3="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
+    	if [[ $recurrence =~ $REGEX3 ]]; then
+    		MATCH3="${BASH_REMATCH[0]}"
     		break
     	else
     		REGEX2="ON_([0-6]{1,6})$"
     		if [[ $recurrence =~ $REGEX2 ]]; then
-    			MATCH0="${BASH_REMATCH[0]}"   			
+    			MATCH2="${BASH_REMATCH[0]}"   			
 				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
-					dddddd=$(echo "$MATCH0" | awk -F"_" '{print $2}')
+					dddddd=$(echo "$MATCH2" | awk -F"_" '{print $2}')
 					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
 					[[ $dddddd =~ 1 ]] && ddd+="Monday "
 					[[ $dddddd =~ 2 ]] && ddd+="Tuesday "
@@ -2002,34 +2056,60 @@ create_alarms() {
 					
 				else echo "Repeated character !"
 				fi
+			else
+				echo "Wrong recurrence format !"
     		fi
  		fi
  	done
+
+ 	if [ $fzf_bin -eq 1 ]; then
+ 		header=" Enable / disable alarm"
+ 		prompt="Enable / disable alarm"
+ 		
+   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+		enable_fzf=${choice:5}
+ 	fi
     
    	while :
 	do
-	    read -p "Enable (ON/OFF or YES/NO): " enabled
-	    REGEX="ON|OFF|YES|NO"
-    	[[ $enabled =~ $REGEX ]] && break
+	    read -e -p "Enable (ON/OFF or YES/NO): " -i "$enable_fzf" enabled
+	    REGEX4="ON|OFF|YES|NO"
+    	[[ $enabled =~ $REGEX4 ]] && break
   	done
-   
+ 
+ 	if [ $fzf_bin -eq 1 ]; then
+ 		header=" Choose a radio or *CHIME* for an alarm"
+ 		prompt="Choose a radio or *CHIME* for an alarm"
+ 		
+   		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+		to_play_fzf=${radio_uri[${choice:5}]}
+ 	fi
+	
     while :
 	do
-    	read -p "Play (CHIME or URI): " to_play
-    	REGEX="CHIME|^(http|https)://"
-    	if [[ $to_play =~ $REGEX ]]; then
-    		MATCH0="${BASH_REMATCH[0]}"
-    		echo $MATCH0
-    		[ $MATCH0 != "CHIME" ] && to_play="\"$to_play\""
+    	read -e -p "Play (CHIME or URI): " -i "$to_play_fzf" to_play
+    	#REGEX5="CHIME|^(http|https)://"
+    	REGEX5="CHIME|^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
+    	if [[ $to_play =~ $REGEX5 ]]; then
+    		MATCH5="${BASH_REMATCH[0]}"
+    		[ $MATCH5 != "CHIME" ] && to_play="\"$to_play\""
     		break  		
  		fi
    	done
+
+ 	if [ $fzf_bin -eq 1 ]; then
+ 		header=" Choose play mode"
+ 		prompt="Choose play mode"
+ 		
+   		choice=$(printf "Play %s\n" "${fzf_play_mode[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+		pm_fzf=${choice:5}
+ 	fi
    
     while :
 	do
-	    read -p "Play mode (NORMAL, SHUFFLE_NOREPEAT, SHUFFLE, REPEAT_ALL, REPEAT_ONE, SHUFFLE_REPEAT_ONE): " play_mode
- 	    REGEX="NORMAL|SHUFFLE_NOREPEAT|SHUFFLE|REPEAT_ALL|REPEAT_ONE|SHUFFLE_REPEAT_ONE"
-    	[[ $play_mode =~ $REGEX ]] && break
+	    read -e -p "Play mode (NORMAL, SHUFFLE_NOREPEAT, SHUFFLE, REPEAT_ALL, REPEAT_ONE, SHUFFLE_REPEAT_ONE): " -i "$pm_fzf" play_mode
+ 	    REGEX6="NORMAL|SHUFFLE_NOREPEAT|SHUFFLE|REPEAT_ALL|REPEAT_ONE|SHUFFLE_REPEAT_ONE"
+    	[[ $play_mode =~ $REGEX6 ]] && break
   	done
    
    	while :
@@ -2039,15 +2119,25 @@ create_alarms() {
     		break
  		fi
   	done
+
+ 	if [ $fzf_bin -eq 1 ]; then
+ 		header=" Grouped speakers"
+ 		prompt="Grouped speakers"
+ 		
+   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+		gs_fzf=${choice:5}
+ 	fi
     
    	while :
 	do
-	    read -p "Grouped speakers (ON/OFF , YES/NO): " grouped
-	    REGEX="ON|OFF|YES|NO"
-    	[[ $grouped =~ $REGEX ]] && break
+	    read -e -p "Grouped speakers (ON/OFF , YES/NO): " -i "$gs_fzf" grouped
+	    REGEX8="ON|OFF|YES|NO"
+    	[[ $grouped =~ $REGEX8 ]] && break
   	done
-  	
-	alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
+
+	shopt -u nocasematch
+
+	alarm_spec="$start_time,$duration,${recurrence^^},${enabled^^},$to_play,${play_mode^^},$volume,${grouped^^}"
 	echo -e "\nalarm_spec: $alarm_spec"
 	 
   	#sonos $loc $device create_alarm "$alarm_spec"
