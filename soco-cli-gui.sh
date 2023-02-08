@@ -1748,12 +1748,12 @@ al_spec() {
 	echo "$8"
 	echo "--"
 	
+	shopt -s nocasematch
+
    	while :
 	do
     	read -e -p "Input start time (HH:MM): " -i $1 start_time 
     	REGEX1="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
-    	#[[ $start_time == "_" ]] && break
-    	#[[ $start_time =~ $REGEX ]] && break
     	[[ $start_time == "_" ]] || [[ $start_time =~ $REGEX1 ]] && break
  	done
 
@@ -1761,8 +1761,6 @@ al_spec() {
 	do
     	read -e -p "Input duration (HH:MM): " -i $2 duration
     	REGEX2="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
-    	#[[ $duration == "_" ]] && break
-    	#[[ $duration =~ $REGEX ]] && break
     	[[ $duration == "_" ]] || [[ $duration =~ $REGEX2 ]] && break
  	done
  
@@ -1796,6 +1794,8 @@ al_spec() {
 					
 				else echo "Repeated character !"
 				fi
+ 			else
+				echo "Wrong recurrence format !"
     		fi
  		fi
  	done
@@ -1812,11 +1812,10 @@ al_spec() {
     while :
 	do
     	read -e -p "Play (CHIME or URI): " -i "$uri" to_play
-    	REGEX5="CHIME|^(http|https)://"
-    	#if [[ $to_play =~ $REGEX ]]; then
+    	#REGEX5="CHIME|^(http|https)://"
+    	REGEX5="CHIME|^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
     	if [[ $to_play =~ $REGEX5 ]] || [[ $to_play == "_" ]]; then
     		MATCH5="${BASH_REMATCH[0]}"
-    		echo $MATCH5
     		[ $MATCH5 != "CHIME" ] && to_play="\"$to_play\""
     		break  		
  		fi
@@ -1846,7 +1845,10 @@ al_spec() {
     	[[ $grouped =~ $REGEX8 ]] || [[ $grouped == "_" ]] && break
   	done
 
-	alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
+	shopt -u nocasematch
+
+	alarm_spec="$start_time,$duration,${recurrence^^},${enabled^^},$to_play,${play_mode^^},$volume,${grouped^^}"
+	#alarm_spec="$start_time,$duration,$recurrence,$enabled,$to_play,$play_mode,$volume,$grouped"
 }
 
 modify_alarms() {
@@ -2036,9 +2038,9 @@ create_alarms() {
     		MATCH3="${BASH_REMATCH[0]}"
     		break
     	else
-    		REGEX2="ON_([0-6]{1,6})$"
-    		if [[ $recurrence =~ $REGEX2 ]]; then
-    			MATCH2="${BASH_REMATCH[0]}"   			
+    		REGEX32="ON_([0-6]{1,6})$"
+    		if [[ $recurrence =~ $REGEX32 ]]; then
+    			MATCH32="${BASH_REMATCH[0]}"   			
 				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
 					dddddd=$(echo "$MATCH2" | awk -F"_" '{print $2}')
 					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
@@ -2050,8 +2052,8 @@ create_alarms() {
 					[[ $dddddd =~ 6 ]] && ddd+="Saturday "
 					
 					read -p "Recurrence: $ddd OK ? (y/n)" rep_alarm
-	    			REGEX="Y|y|O|o"
-    				[[ $rep_alarm =~ $REGEX ]] && break
+	    			REGEX33="Y|y|O|o"
+    				[[ $rep_alarm =~ $REGEX33 ]] && break
  					ddd=""
 					
 				else echo "Repeated character !"
@@ -2077,6 +2079,7 @@ create_alarms() {
     	[[ $enabled =~ $REGEX4 ]] && break
   	done
  
+
  	if [ $fzf_bin -eq 1 ]; then
  		header=" Choose a radio or *CHIME* for an alarm"
  		prompt="Choose a radio or *CHIME* for an alarm"
