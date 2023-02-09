@@ -49,6 +49,39 @@ if (! type fzf > /dev/null 2>&1); then fzf_bin=0
 else fzf_bin=1
 fi
 
+fzf_args=(
+	--height=8
+	--info=hidden
+    --with-nth=2..
+    --layout=reverse
+    --bind=change:clear-query
+    --border
+	)
+
+#    --prompt='Play'
+#    --header="${header:1}"
+
+declare -A radio_uri
+	radio_uri=(['France Info']="http://icecast.radiofrance.fr/franceinfo-midfi.mp3"
+	['France Inter']="http://icecast.radiofrance.fr/franceinter-midfi.mp3"
+	['RTL']="https://streamer-02.rtl.fr/rtl-1-44-128"
+	['Classic FM']="https://classicfm.ice.infomaniak.ch/classic-fm.mp3"
+	['FIP Jazz']="https://icecast.radiofrance.fr/fipjazz-midfi.mp3"
+	['FIP Metal']="https://icecast.radiofrance.fr/fipmetal-midfi.mp3"
+	['FIP Reggae']="https://icecast.radiofrance.fr/fipreggae-midfi.mp3"
+	['FIP Rock']="https://icecast.radiofrance.fr/fiprock-midfi.mp3"
+	['France Bleue Bourgone']="https://icecast.radiofrance.fr/fbbourgogne-midfi.mp3"
+	['France Culture']="https://icecast.radiofrance.fr/franceculture-midfi.mp3"
+	['France Musique']="https://icecast.radiofrance.fr/francemusique-midfi.mp3"
+	['Frequence Jazz']="https://jazzradio.ice.infomaniak.ch/frequencejazz-high.mp3"
+	['Jazz Blues']="https://jazzblues.ice.infomaniak.ch/jazzblues-high.mp3"
+	['Le Mouv']="https://icecast.radiofrance.fr/mouv-midfi.mp3"
+	['RFM']="https://stream.rfm.fr/rfm.mp3"
+	['Soma FM']="http://ice2.somafm.com/indiepop-128-aac"
+	['Radio Classique']="http://radioclassique.ice.infomaniak.ch/radioclassique-high.mp3"
+	['Party Viber Radio']="http://www.partyviberadio.com:8020/listen.pls"
+	['*CHIME*']="CHIME")
+
 devices() {
 	discover=$(sonos-discover -p 2>/dev/null)
 	if [ -z "$discover" ]; then
@@ -1737,17 +1770,6 @@ move_alarms() {
 
 al_spec() {
 
-	echo "--"
-	echo "$1"
-	echo "$2"
-	echo "$3"
-	echo "$4"
-	echo "$5"
-	echo "$6"
-	echo "$7"
-	echo "$8"
-	echo "--"
-	
 	shopt -s nocasematch
 
    	while :
@@ -1800,6 +1822,7 @@ al_spec() {
  		fi
  	done
     
+    
    	while :
 	do
 	    read -e -p "Enable (ON/OFF or YES/NO): " -i $4 enabled
@@ -1807,16 +1830,31 @@ al_spec() {
     	[[ $enabled =~ $REGEX4 ]] || [[ $enabled == "_" ]] && break
   	done
    
-   uri=$(echo $5 | sed 's/\"//g')
+ 
+    if [ $fzf_bin -eq 1 ]; then
+ 		radio_uri+=([*No change*]="_")
+   
+ 		header=" Choose *No change* to keep the same alarm"
+ 		prompt="Choose a radio or *CHIME* for an alarm"
+ 		
+   		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt" --header "$header")
+		to_play_fzf=${radio_uri[${choice:5}]}
+ 	fi
+
+	uri=$(echo $5 | sed 's/\"//g')
+	[ -z "$to_play_fzf" ] && to_play_fzf="$uri"
    
     while :
 	do
-    	read -e -p "Play (CHIME or URI): " -i "$uri" to_play
+    	read -e -p "Play (CHIME or URI): " -i "$to_play_fzf" to_play
     	#REGEX5="CHIME|^(http|https)://"
     	REGEX5="CHIME|^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
     	if [[ $to_play =~ $REGEX5 ]] || [[ $to_play == "_" ]]; then
-    		MATCH5="${BASH_REMATCH[0]}"
-    		[ $MATCH5 != "CHIME" ] && to_play="\"$to_play\""
+    		if [[ $to_play != "_" ]]; then
+    			MATCH5="${BASH_REMATCH[0]}"
+    			# echo "$MATCH5"
+    			[ $MATCH5 != "CHIME" ] && to_play="\"$to_play\""
+    		fi
     		break  		
  		fi
    	done
@@ -1887,17 +1925,9 @@ modify_alarms() {
 				volume="${ids[7]}"
 				grouped="${ids[8]^^}"
 				
-				echo ${ids[@]}
-
 				al_spec $start_time $duration $recurrence $enabled "$to_play" $play_mode $volume $grouped
 				
-				
-				# 07:00,01:30,WEEKDAYS,ON,"http://stream.live.vc.bbcmedia.co.uk/bbc_radio_fourfm",NORMAL,50,OFF
-   				
    				echo $alarm_spec
-   				# 06:00,00:30,WEEKDAYS,NO,CHIME,SHUFFLE,25,ON
-   				
-   				# https://jazzradio.ice.infomaniak.ch/frequencejazz-high.mp3
    				
    				sonos $loc $device modify_alarm $trk $alarm_spec
 				[ $? != 0 ] && echo -e "${red}Error !${reset}"
@@ -1965,43 +1995,18 @@ create_alarms() {
     echo "$court_ala"
     echo
 
-	declare -A radio_uri
-	radio_uri=(['France Info']="http://icecast.radiofrance.fr/franceinfo-midfi.mp3"
-	['France Inter']="http://icecast.radiofrance.fr/franceinter-midfi.mp3"
-	['RTL']="https://streamer-02.rtl.fr/rtl-1-44-128"
-	['Classic FM']="https://classicfm.ice.infomaniak.ch/classic-fm.mp3"
-	['FIP Jazz']="https://icecast.radiofrance.fr/fipjazz-midfi.mp3"
-	['FIP Metal']="https://icecast.radiofrance.fr/fipmetal-midfi.mp3"
-	['FIP Reggae']="https://icecast.radiofrance.fr/fipreggae-midfi.mp3"
-	['FIP Rock']="https://icecast.radiofrance.fr/fiprock-midfi.mp3"
-	['France Bleue Bourgone']="https://icecast.radiofrance.fr/fbbourgogne-midfi.mp3"
-	['France Culture']="https://icecast.radiofrance.fr/franceculture-midfi.mp3"
-	['France Musique']="https://icecast.radiofrance.fr/francemusique-midfi.mp3"
-	['Frequence Jazz']="https://jazzradio.ice.infomaniak.ch/frequencejazz-high.mp3"
-	['Jazz Blues']="https://jazzblues.ice.infomaniak.ch/jazzblues-high.mp3"
-	['Le Mouv']="https://icecast.radiofrance.fr/mouv-midfi.mp3"
-	['RFM']="https://stream.rfm.fr/rfm.mp3"
-	['Soma FM']="http://ice2.somafm.com/indiepop-128-aac"
-	['Radio Classique']="http://radioclassique.ice.infomaniak.ch/radioclassique-high.mp3"
-	['Party Viber Radio']="http://www.partyviberadio.com:8020/listen.pls"
-	['*CHIME*']="CHIME")
+	#################
+	# array
+	#################
 	
+		
 	fzf_recurrence=("DAILY" "ONCE" "WEEKDAYS" "WEEKENDS" "ON_DDDDDD")
 	fzf_play_mode=("NORMAL" "SHUFFLE_NOREPEAT" "SHUFFLE" "REPEAT_ALL" "REPEAT_ONE" "SHUFFLE_REPEAT_ONE")
 	fzf_yes_no=("ON" "OFF" "YES" "NO")
 
-	
-	fzf_args=(
-	--height=8
-	--info=hidden
-    --with-nth=2..
-    --layout=reverse
-    --bind=change:clear-query
-    --border
-	)
-
-#    --prompt='Play'
-#    --header="${header:1}"
+	#################
+	# fzf_args=
+	#################
 	
 	echo
 
@@ -2025,7 +2030,7 @@ create_alarms() {
  		header=" Input recurrence"
  		prompt="Input recurrence"
  		
-   		choice=$(printf "Play %s\n" "${fzf_recurrence[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+   		choice=$(printf "Play %s\n" "${fzf_recurrence[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		recurrence_fzf=${choice:5}
  	fi
  
@@ -2068,7 +2073,7 @@ create_alarms() {
  		header=" Enable / disable alarm"
  		prompt="Enable / disable alarm"
  		
-   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		enable_fzf=${choice:5}
  	fi
     
@@ -2084,7 +2089,7 @@ create_alarms() {
  		header=" Choose a radio or *CHIME* for an alarm"
  		prompt="Choose a radio or *CHIME* for an alarm"
  		
-   		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+   		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		to_play_fzf=${radio_uri[${choice:5}]}
  	fi
 	
@@ -2104,7 +2109,7 @@ create_alarms() {
  		header=" Choose play mode"
  		prompt="Choose play mode"
  		
-   		choice=$(printf "Play %s\n" "${fzf_play_mode[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+   		choice=$(printf "Play %s\n" "${fzf_play_mode[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		pm_fzf=${choice:5}
  	fi
    
@@ -2127,7 +2132,7 @@ create_alarms() {
  		header=" Grouped speakers"
  		prompt="Grouped speakers"
  		
-   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
+   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		gs_fzf=${choice:5}
  	fi
     
