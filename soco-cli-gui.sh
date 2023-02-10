@@ -1596,7 +1596,7 @@ soco_alarms() {
 		echo -e " 5) ${bgd}E${reset}nable/disable alarms                " " | "
 		echo -e " 6) Mo${bgd}v${reset}e alarm                           " " | "
 		echo -e " 7) Snoo${bgd}z${reset}e alarm                         " " | "
-		echo -e " 8)                                      " " | "
+		echo -e " 8) Cop${bgd}y${reset} alarm                           " " | "
 		echo -e " 9)                                      " " | "
 		echo -e " 10) ${bgd}H${reset}ome                                " " | "
 		echo -e "============================================"
@@ -1612,6 +1612,7 @@ soco_alarms() {
 			5|e|E) enable_alarms;;
 			6|v|V) move_alarms;;
 			7|z|Z) snooze_alarms;;
+			8|y|Y) copy_alarms;;
 			10|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
@@ -1735,9 +1736,6 @@ move_alarms() {
     echo "$court_ala"
     echo
     
-    #y=($((awk '{print $1}' | grep -v $device) <<< $dev))
-   	#echo ${y[@]}
-    
    	while :
 	do    
     	read -p "Enter the <Alarm ID> alarm to move or [q] to quit: " trk
@@ -1766,6 +1764,52 @@ move_alarms() {
 	
 	sleep 1
    # read -p "< Press Enter>"
+}
+
+copy_alarms() {
+    echo -e "\n${bold} Copy alarm to speaker... ${reset}"
+    
+    list_alarms
+    echo "$court_ala"
+    echo
+    
+   	while :
+	do    
+    	read -p "Enter the <Alarm ID> alarm to copy or [q] to quit: " trk
+		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
+			break
+		else
+			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
+			if [[ $ala_id =~ "$trk" ]]; then
+			
+				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
+				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
+				other="${other_speakers[@]}"
+
+    			if [ $fzf_bin -eq 1 ]; then
+ 					header=" Choose a target speaker for this alarm"
+ 					prompt="Choose a target speaker for this alarm: "
+ 		
+   					choice=$(printf "Target %s\n" "${other_speakers[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
+					other_speaker_fzf=${choice:7}
+ 				fi
+
+				[ -z "$other_speaker_fzf" ] && other_speaker_fzf="$other"
+				
+				read -e -p "Copy Alarm ID <$trk> to Speaker <$other> (enter target name): " -i "$other_speaker_fzf" target
+				if [[ $other_speakers =~ "$target" ]]; then
+					sonos $loc $target copy_alarm $trk
+					[ $? != 0 ] && echo -e "${red}Error !${reset}"
+					break
+				else echo "Wrong target name !"
+				fi
+			else
+				echo "Wrong <Alarm ID> !"
+			fi
+		fi
+	done
+	
+	sleep 1
 }
 
 al_spec() {
