@@ -51,15 +51,15 @@ fi
 
 fzf_args=(
 	--height=8
+	--with-nth=2..
+	--layout=reverse
 	--info=hidden
-    --with-nth=2..
-    --layout=reverse
-    --bind=change:clear-query
     --border
 	)
 
-#    --prompt='Play'
-#    --header="${header:1}"
+#   --prompt='Play'
+#   --header="${header:1}"
+#	--bind=change:clear-query
 
 declare -A radio_uri
 	radio_uri=(['France Info']="http://icecast.radiofrance.fr/franceinfo-midfi.mp3"
@@ -1774,14 +1774,14 @@ al_spec() {
 
    	while :
 	do
-    	read -e -p "Input start time (HH:MM): " -i $1 start_time 
+    	read -e -p "Start time (HH:MM): " -i $1 start_time 
     	REGEX1="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
     	[[ $start_time == "_" ]] || [[ $start_time =~ $REGEX1 ]] && break
  	done
 
     while :
 	do
-    	read -e -p "Input duration (HH:MM): " -i $2 duration
+    	read -e -p "Duration (HH:MM): " -i $2 duration
     	REGEX2="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
     	[[ $duration == "_" ]] || [[ $duration =~ $REGEX2 ]] && break
  	done
@@ -1789,7 +1789,7 @@ al_spec() {
  	ddd=""
     while :
 	do
-    	read -e -p "Input recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " -i $3 recurrence
+    	read -e -p "Recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " -i $3 recurrence
 	    REGEX3="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
 	    [[ $recurrence == "_" ]] && break
     	if [[ $recurrence =~ $REGEX3 ]]; then
@@ -1835,7 +1835,7 @@ al_spec() {
  		radio_uri+=([*No change*]="_")
    
  		header=" Choose *No change* to keep the same alarm"
- 		prompt="Choose a radio or *CHIME* for an alarm"
+ 		prompt="Choose a radio or *CHIME* for an alarm: "
  		
    		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt" --header "$header")
 		to_play_fzf=${radio_uri[${choice:5}]}
@@ -1995,40 +1995,31 @@ create_alarms() {
     echo "$court_ala"
     echo
 
-	#################
-	# array
-	#################
-	
-		
 	fzf_recurrence=("DAILY" "ONCE" "WEEKDAYS" "WEEKENDS" "ON_DDDDDD")
 	fzf_play_mode=("NORMAL" "SHUFFLE_NOREPEAT" "SHUFFLE" "REPEAT_ALL" "REPEAT_ONE" "SHUFFLE_REPEAT_ONE")
 	fzf_yes_no=("ON" "OFF" "YES" "NO")
 
-	#################
-	# fzf_args=
-	#################
-	
 	echo
 
 	shopt -s nocasematch
 
    	while :
 	do
-    	read -p "Input start time (HH:MM): " start_time    
+    	read -p "Start time (HH:MM): " start_time    
     	REGEX1="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
     	[[ $start_time =~ $REGEX1 ]] && break
  	done
 
     while :
 	do
-    	read -p "Input duration (HH:MM): " duration
+    	read -p "Duration (HH:MM): " duration
     	REGEX2="^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$"
     	[[ $duration =~ $REGEX2 ]] && break
  	done
 
  	if [ $fzf_bin -eq 1 ]; then
  		header=" Input recurrence"
- 		prompt="Input recurrence"
+ 		prompt="Recurrence: "
  		
    		choice=$(printf "Play %s\n" "${fzf_recurrence[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		recurrence_fzf=${choice:5}
@@ -2037,7 +2028,7 @@ create_alarms() {
  	ddd=""
     while :
 	do
-    	read -e -p "Input recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " -i "$recurrence_fzf" recurrence
+    	read -e -p "Recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " -i "$recurrence_fzf" recurrence
 	    REGEX3="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
     	if [[ $recurrence =~ $REGEX3 ]]; then
     		MATCH3="${BASH_REMATCH[0]}"
@@ -2071,7 +2062,7 @@ create_alarms() {
 
  	if [ $fzf_bin -eq 1 ]; then
  		header=" Enable / disable alarm"
- 		prompt="Enable / disable alarm"
+ 		prompt="Enable / disable alarm: "
  		
    		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		enable_fzf=${choice:5}
@@ -2087,7 +2078,7 @@ create_alarms() {
 
  	if [ $fzf_bin -eq 1 ]; then
  		header=" Choose a radio or *CHIME* for an alarm"
- 		prompt="Choose a radio or *CHIME* for an alarm"
+ 		prompt="Choose a radio or *CHIME* for an alarm: "
  		
    		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		to_play_fzf=${radio_uri[${choice:5}]}
@@ -2107,7 +2098,7 @@ create_alarms() {
 
  	if [ $fzf_bin -eq 1 ]; then
  		header=" Choose play mode"
- 		prompt="Choose play mode"
+ 		prompt="Choose play mode: "
  		
    		choice=$(printf "Play %s\n" "${fzf_play_mode[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		pm_fzf=${choice:5}
@@ -2130,7 +2121,7 @@ create_alarms() {
 
  	if [ $fzf_bin -eq 1 ]; then
  		header=" Grouped speakers"
- 		prompt="Grouped speakers"
+ 		prompt="Grouped speakers: "
  		
    		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
 		gs_fzf=${choice:5}
