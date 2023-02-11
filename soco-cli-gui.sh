@@ -736,6 +736,99 @@ minfo () {
 	fi
 }
 
+display_cover_art() {
+		if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
+			if command -v exiftool &> /dev/null; then
+				#ffmpeg -i "$audio_file" -an -c:v copy /tmp/cover.jpg
+				export LC_CTYPE=fr_FR.UTF-8
+				export LC_ALL=fr_FR.UTF-8
+				exiftool -picture -b "$1"  > /tmp/cover.png
+				
+				[ $? == 0 ] && printf "\n\033]1337;File=;width=400px;inline=1:`cat /tmp/cover.png | base64`\a\n"
+			fi
+		fi
+}
+
+play_local_audio_file() {
+	playing="Play a local audio file..."
+    echo -e "\n${bold} $playing ${reset}\n"
+
+	param="$*"
+
+	if ! command -v mediainfo &> /dev/null; then
+		echo "Install mediainfo to display media tags !"
+		echo -e "${italic}brew install mediainfo${reset}"
+		mediainfo=false
+	else
+		mediainfo=true
+	fi
+	
+	if [ -n "$param" ]; then							     # fichier passé en param 
+		if [ "$(dirname "$param")" == "." ]; then
+			music="$(pwd)/$param"
+		else
+			music="$param"
+		fi
+		
+		
+		#if [ -f "$music" ]; then
+			audio_file="$music"
+		#fi
+	
+	else
+	
+		#fzf_bin=0
+	
+    	if [ $fzf_bin -eq 1 ]; then
+ 			header=" Choose a target speaker for this alarm"
+ 			prompt="Choose a target speaker for this alarm: "
+ 		
+   			#choice=$(printf "Target %s\n" "${other_speakers[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
+			#other_speaker_fzf=${choice:7}
+		
+			volume=$(find /Volumes $HOME -maxdepth 1 -type d -not -path '*/\.*' -print 2> /dev/null | fzf)
+
+			music=$(find $volume -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.m4a" -o -name "*.aac" -o -name "*.flac" -o -name "*.ogg" -o -name "*.wma" -o -name "*.wav" \) -print 2> /dev/null | fzf)
+
+			audio_file="$music"
+			
+		else
+
+			while :
+			do    
+				echo -e "${underline}Enter audio file/folder path${reset} (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav): "
+				read -e -i "$HOME/" -p " > " fa
+			
+				if [ -f "$fa" ]; then
+					audio_file="$fa"
+					break
+				fi
+				echo
+			done
+ 		fi
+		
+		
+		#[ -z "$music" ] && music="$audio_file"
+
+
+	fi
+	
+	if [ -f "$audio_file" ]; then
+		echo -e "\nCurrently playing ${underline}$audio_file${reset} ...\n"
+		[ "$mediainfo" = true ] && minfo "$audio_file"
+		
+		# mediainfo - mp3info
+		
+		display_cover_art "$audio_file"
+	
+		echo -e "\n${italic}Wait for the music to end, hit <sonos -l $device stop> from another shell or hit CTRL-C to quit${reset}"
+		sonos $loc $device play_file "$audio_file"
+	else
+		echo -e "File $audio_file not found !"
+	fi
+	
+}
+
 # play local file (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav)
 # alac in m4v
 # /Users/bruno/Music/The Smile - A Light For Attracting Attention [Japan Edition] (2022)/01. The Same.mp3
@@ -763,6 +856,7 @@ play_local_file() {
 	
 	if [ -d "$fa" ]; then
 		if [[ "$OSTYPE" == "darwin"* ]]; then
+			echo $fa
 			list=$(find -E "$fa" -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
 		else
 			list=$(find "$fa" -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort)
@@ -784,6 +878,8 @@ play_local_file() {
 			[ "$mediainfo" = true ] && minfo "${line}" "$i"
 			
 			sonos $loc $device play_file "${line}"
+			
+			[ $? != 0 ] && echo -e "${red}Error !${reset}"; break
 			((i++))
 		done <<< "$list"
 
@@ -2480,7 +2576,7 @@ if [ -n "$func" ]; then
 		#Chambre           192.168.2.232  One             Visible       14.20.1
 		#Salon             192.168.2.222  One             Visible       14.20.1
 
-		echo $param
+		#echo $param
 		
 		if [[ "$dev" == *"$default"* ]]; then
 			device="$default"
