@@ -457,7 +457,7 @@ soco() {
 			43|a|A) soco_alarms $device;;
 			45) play_radio_from_tunein;;
 			46) play_local_m3u;;
-			47) play_local_file;;	
+			47) play_local_audio_file;;	
 			48) play_local_dir;;
 			49) play_shared_link;;	
 			50|b|B) play_album_from_library;;
@@ -711,17 +711,21 @@ minfo () {
 	info=$(mediainfo "$1")
 	
 	album=$(echo "$info" | grep -m 1 'Album ')
+	album="${album#*: }"
 	performer=$(echo "$info" | grep -m 1 'Performer')
+	performer="${performer#*: }"
 	duration=$(echo "$info" | grep -m 1 'Duration ')
 	track=$(echo "$info" | grep -m 1 'Track name ')
+	track="${track#*: }"
 	year=$(echo "$info" | grep -m 1 'Recorded date ')
+	year="${year#*: }"
 	codec=$(echo "$info" | grep -m 1 'Codec ID/Info ')
 	format=$(echo "$info" | grep -m 1 'Format ')
 	profile=$(echo "$info" | grep -m 1 'Format profile ')
 	format="${format#*: } ${profile#*: }"
 	
 	if [ -n "$2" ]; then	
-		printf " %-2s %-20s  %-30s %-30s %-12s %-10s \n" "$2" "${performer#*: }" "${track#*: }" "${album#*: }" "${duration#*: }" "${year#*: }"
+		printf " %-2s %-25s  %-35s %-35s %-12s %-10s \n" "$2" "${performer:0:35}" "${track:0:35}" "${album:0:35}" "${duration#*: }" "${year#*: }"
 	else
 		printf " %-12s  %-35s \n" "Artist:" "${performer#*: }"
 		printf " %-12s  %-35s \n" "Track:" "${track#*: }"
@@ -736,18 +740,28 @@ minfo () {
 	fi
 }
 
+# Display cover art from audio file (mp3, flac)
+# Require exiftool (or ffmpeg) and a compatible terminal (iTerm2)
 display_cover_art() {
 		if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
 			if command -v exiftool &> /dev/null; then
 				#ffmpeg -i "$audio_file" -an -c:v copy /tmp/cover.jpg
+				# https://exiftool.org/forum/index.php?topic=3856.0
 				export LC_CTYPE=fr_FR.UTF-8
 				export LC_ALL=fr_FR.UTF-8
+				#exiftool -a -G4 "-picture*" "$1"
 				exiftool -picture -b "$1"  > /tmp/cover.png
 				
-				[ $? == 0 ] && printf "\n\033]1337;File=;width=400px;inline=1:`cat /tmp/cover.png | base64`\a\n"
+				[ $? == 0 ] && printf "\n\033]1337;File=;width=300px;inline=1:`cat /tmp/cover.png | base64`\a\n"
 			fi
 		fi
 }
+
+# play local file (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav)
+# alac in m4v
+# /Users/bruno/Music/The Smile - A Light For Attracting Attention [Japan Edition] (2022)/01. The Same.mp3
+
+# BLOQUANT: Ctrl-C to quit
 
 play_local_audio_file() {
 	playing="Play a local audio file..."
@@ -764,17 +778,13 @@ play_local_audio_file() {
 	fi
 	
 	if [ -n "$param" ]; then							     # fichier passé en param 
+	
 		if [ "$(dirname "$param")" == "." ]; then
-			music="$(pwd)/$param"
+			audio_file="$(pwd)/$param"
 		else
-			music="$param"
+			audio_file="$param"
 		fi
 		
-		
-		#if [ -f "$music" ]; then
-			audio_file="$music"
-		#fi
-	
 	else
 	
 		#fzf_bin=0
@@ -783,15 +793,14 @@ play_local_audio_file() {
  			header=" Choose a target speaker for this alarm"
  			prompt="Choose a target speaker for this alarm: "
  		
-   			#choice=$(printf "Target %s\n" "${other_speakers[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
-			#other_speaker_fzf=${choice:7}
+			fzf_music_args=(
+				--multi
+    			--border
+			)
 		
 			volume=$(find /Volumes $HOME -maxdepth 1 -type d -not -path '*/\.*' -print 2> /dev/null | fzf)
-
-			music=$(find $volume -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.m4a" -o -name "*.aac" -o -name "*.flac" -o -name "*.ogg" -o -name "*.wma" -o -name "*.wav" \) -print 2> /dev/null | fzf)
-
-			audio_file="$music"
-			
+			music=$(find $volume -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.m4a" -o -name "*.aac" -o -name "*.flac" -o -name "*.ogg" -o -name "*.wma" -o -name "*.wav" \) -print 2> /dev/null | fzf "${fzf_music_args[@]}")
+			audio_file="$music"		
 		else
 
 			while :
@@ -806,44 +815,56 @@ play_local_audio_file() {
 				echo
 			done
  		fi
-		
-		
-		#[ -z "$music" ] && music="$audio_file"
-
 
 	fi
 	
-	if [ -f "$audio_file" ]; then
-		echo -e "\nCurrently playing ${underline}$audio_file${reset} ...\n"
-		[ "$mediainfo" = true ] && minfo "$audio_file"
+	echo -e "\n${greenbold}Tracks to play...${reset}"
+	printf " \e[4m%-2s\e[0m \e[4m%-25s\e[0m  \e[4m%-35s\e[0m \e[4m%-35s\e[0m \e[4m%-12s\e[0m \e[4m%-10s\e[0m \n" "N°" "Artist" "Track" "Album" "Duration" "Year"
+
+	i=1
+	while IFS= read -r line; do
+				
+		if [ -f "$line" ]; then
+			[ "$mediainfo" = true ] && minfo "$line" "$i"
+			#display_cover_art "$line" 
+		fi
+		((i++))
+	done <<< "$audio_file"
 		
-		# mediainfo - mp3info
+	echo -e "\n${greenbold}Playing...${reset}"
 		
-		display_cover_art "$audio_file"
-	
-		echo -e "\n${italic}Wait for the music to end, hit <sonos -l $device stop> from another shell or hit CTRL-C to quit${reset}"
-		sonos $loc $device play_file "$audio_file"
-	else
-		echo -e "File $audio_file not found !"
-	fi
+	i=1
+	while IFS= read -r line; do
+		if [ -f "$line" ]; then
+			echo -e "\n${bold}Currently playing ...${reset}\n"
+			printf " %-2s %-25s  %-35s %-35s %-12s %-10s \n" "N°" "Artist" "Track" "Album" "Duration" "Year"
+			[ "$mediainfo" = true ] && minfo "${line}" "$i"
+			local _x="$album"
+			[ "$_x" != "$_y" ] && display_cover_art "$line" 
+			local _y="$_x"
+			
+			echo -e "\n${italic}Wait for the music to end, hit <sonos -l $device stop> from another shell or hit CTRL-C to play next track${reset}"
+			sonos $loc $device play_file "$line"
+			echo
+		else
+			echo -e "File $line not found !"
+		fi
+		((i++))
+		
+	done <<< "$audio_file"
 	
 }
 
-# play local file (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav)
-# alac in m4v
-# /Users/bruno/Music/The Smile - A Light For Attracting Attention [Japan Edition] (2022)/01. The Same.mp3
 
-# BLOQUANT Ctrl-C to quit
+play_local_audio_dir() {
 
-play_local_file() {
-	playing="Play a local audio file..."
+	#play_local_audio_dir "/Users/bruno/music/Renaud - Métèque (2022)"
+	
+	playing="Playing a local directory..."
     echo -e "\n${bold} $playing ${reset}\n"
 
-	echo -e "${underline}Enter audio file/folder path${reset} (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav) "
-	read -e -i "$HOME/" -p ": " fa
-	
-	#fa=/Users/bruno/Music/Alanis\ Morissette\ -\ Such\ Pretty\ Forks\ In\ The\ Road
-	
+	param="$*"
+
 	if ! command -v mediainfo &> /dev/null; then
 		echo "Install mediainfo to display media tags !"
 		echo -e "${italic}brew install mediainfo${reset}"
@@ -852,79 +873,126 @@ play_local_file() {
 		mediainfo=true
 	fi
 	
-	audio=$(echo "$fa" | awk -F"/" '{print $NF}')
-	
-	if [ -d "$fa" ]; then
-		if [[ "$OSTYPE" == "darwin"* ]]; then
-			echo $fa
-			list=$(find -E "$fa" -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
-		else
-			list=$(find "$fa" -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort)
+	if [ -n "$param" ]; then							     # fichier passé en param 
+		
+		if [ -d "$param" ]; then		
+			if [ "$(dirname "$param")" == "." ]; then
+				audio_dir="$(pwd)/$param"
+			else
+				audio_dir="$param"
+			fi
+		
+			if [[ "$OSTYPE" == "darwin"* ]]; then
+				liste=$(find -E "$audio_dir" -maxdepth 1 -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
+			else
+				liste=$(find "$audio_dir" -maxdepth 1 -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort)
+			fi
+			
+			if [ -z "$liste" ]; then
+				echo "$audio_dir: No audio files founds !"
+			fi
+
 		fi
+		echo
 
-		echo -e "\n${underline}Tracks to play...${reset}"
-		i=1
-		while IFS= read -r line; do
-			[ "$mediainfo" = true ] && minfo "${line}" "$i"
-			((i++))
-		done <<< "$list"
-		
-		echo -e "\n${underline}Playing...${reset}"
-		echo -e "\nHit CTRL-C to play next track \n"
-		printf " %-2s %-20s  %-30s %-30s %-12s %-10s \n" "N°" "Artist" "Track" "Album" "Duration" "Year"
-		
-		i=1
-		while IFS= read -r line; do
-			[ "$mediainfo" = true ] && minfo "${line}" "$i"
-			
-			sonos $loc $device play_file "${line}"
-			
-			[ $? != 0 ] && echo -e "${red}Error !${reset}"; break
-			((i++))
-		done <<< "$list"
-
-		#sonos $loc $device play_file "$list"
-	
-	elif [ -f "$fa" ]; then
-		echo -e "\nCurrently playing ${underline}$audio${reset} ...\n"
-		[ "$mediainfo" = true ] && minfo "$fa"
-
-		echo -e "\n${italic}Wait for the music to end, hit <sonos -l $device stop> from another shell or hit CTRL-C to quit${reset}"
-		sonos $loc $device play_file "$fa"
-		#album_art
 	else
-		echo -e "❗ ️File/folder ${bold}$audio${reset} doesn't exist!" && sleep 2
-		playing=""
+	
+    	if [ $fzf_bin -eq 1 ]; then
+ 			header=" Choose a target speaker for this alarm"
+ 			prompt="Choose a target speaker for this alarm: "
+ 		
+			fzf_music_folder_args=(
+    			--border
+    			--exact
+			)
+	
+			while :
+			do    
+				volume=$(find /Volumes $HOME -maxdepth 1 -type d -not -path '*/\.*' -print 2> /dev/null | fzf --header="Select a folder !")
+				music=$(find $volume -type d -not -path '*/\.*' -print 2> /dev/null | fzf "${fzf_music_folder_args[@]}" --header="Select a folder that contains music!")
+				#music=$(find $volume -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.m4a" -o -name "*.aac" -o -name "*.flac" -o -name "*.ogg" -o -name "*.wma" -o -name "*.wav" \) -print 2> /dev/null | fzf "${fzf_music_args[@]}")
+				#audio_dir="$music"
+			
+				if [ -d "$music" ]; then
+					if [[ "$OSTYPE" == "darwin"* ]]; then
+						liste=$(find -E "$music" -maxdepth 1 -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
+					else
+						liste=$(find "$music" -maxdepth 1 -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort)
+					fi
+					
+					if [ -n "$liste" ]; then
+						audio_dir="$music"
+						break
+					else echo "$music: No audio files founds !"
+					fi
+				else echo "No folder found !"
+				fi
+				echo
+			done
+
+		else
+		
+			while :
+			do    
+				echo -e "${underline}Enter audio folder path${reset} (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav): "
+				read -e -i "$HOME/" -p " > " fa
+			
+				if [ -d "$fa" ]; then
+					if [[ "$OSTYPE" == "darwin"* ]]; then
+						liste=$(find -E "$fa" -maxdepth 1 -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
+					else
+						liste=$(find "$fa" -maxdepth 1 -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort)
+					fi
+					
+					if [ -n "$liste" ]; then
+						audio_dir="$fa"
+						break
+					else echo "No audio files founds !"
+					fi
+				fi
+				echo
+			done
+
+		fi
 	fi
-}
-
-play_local_dir() {
-
-	playing="Playing a local directory..."
-    echo -e "\n${bold} $playing ${reset}\n"
-
-	echo -e "${underline}Enter a folder path:${reset} "
-	read -e -i "$HOME/" -p "? " dir
-	echo $fa
-	#dir=$(echo "$fa" | sed 's/ /\\ /g')
-	if [ -d "$dir" ]; then
-		sonos $loc $device play_directory "$dir"
-	else
-		echo -e "❗ ️Folder ${bold}$dir${reset} doesn't exist!" && sleep 2
-		playing=""
-	fi	
 	
-	read -p "< Press Enter>"
+	if [ -n "$audio_dir" ]; then		# non vide
+		if [ -n "$liste" ]; then		# non vide
+
+			i=1
+			while IFS= read -r line; do	
+				if [ -f "$line" ]; then
+					[ "$mediainfo" = true ] && minfo "$line" "$i"
+					local _x="$album"
+					[ "$_x" != "$_y" ] && display_cover_art "$line" 
+					local _y="$_x"
+				fi
+				((i++))
+			done <<< "$liste"
+			echo
+			sonos $loc $device play_directory "$dir"
+		fi		
+	fi
+
 	sleep 2
 
 }
 
-export -f play_local_dir
+export -f play_local_audio_dir
+
 
 play_shared_link() {
 
 	playing="Playing a shared link..."
     echo -e "\n${bold} $playing ${reset}\n"
+
+
+	declare -A radio_uri
+		music_uri=(['Spotify']="https://open.spotify.com"
+		['Tidal']="https://tidal.com"
+		['Deezer']="https://www.deezer.com/"
+		['Apple Music']="https://music.apple.com"
+		)
 
 	echo -e "\nExample:"
 	echo "https://open.spotify.com/track/6cpcorzV5cmVjBsuAXq4wD"
