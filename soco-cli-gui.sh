@@ -986,29 +986,35 @@ play_shared_link() {
 	playing="Playing a shared link..."
     echo -e "\n${bold} $playing ${reset}\n"
 
-
-	declare -A radio_uri
-		music_uri=(['Spotify']="https://open.spotify.com"
-		['Tidal']="https://tidal.com"
-		['Deezer']="https://www.deezer.com/"
-		['Apple Music']="https://music.apple.com"
-		)
-
-	echo -e "\nExample:"
+	echo -e "${underline}Examples:${reset}"
 	echo "https://open.spotify.com/track/6cpcorzV5cmVjBsuAXq4wD"
 	echo "https://tidal.com/browse/album/157273956"
 	echo "https://www.deezer.com/en/playlist/5390258182"
 	echo "https://music.apple.com/dk/album/black-velvet/217502930?i=217503142"
+	echo
 
-	music=("https://open.spotify.com" "https://tidal.com" "https://www.deezer.com/" "https://music.apple.com")
+	declare -A music_uri
+		music_uri=(['Spotify']="https://open.spotify.com/"
+		['Tidal']="https://tidal.com/"
+		['Deezer']="https://www.deezer.com/"
+		['Apple Music']="https://music.apple.com/"
+		)
+		
+	 if [ $fzf_bin -eq 1 ]; then
+ 		header=" Choose a service"
+ 		prompt="Choose a service: "
+ 		
+   		choice=$(printf "Play %s\n" "${!music_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
+		music_uri_fzf=${music_uri[${choice:5}]}
+ 	fi
+		
 	echo -e "${underline}Enter an url:${reset} "
-	read -e -i "https://" -p "? " sl
+	read -e -i "$music_uri_fzf" -p "? " sl
 	
-	for i in ${music[@]}; do
+	for i in ${music_uri[@]}; do
 		[[ "$sl" == *"$i"* ]] && s_link=$sl
 	done
 	if [ -n "$s_link" ]; then
-		echo "$sl" 
 		queue=$(sonos $loc $device sharelink "$sl")
 		sonos $loc $device play_from_queue $queue
 	else
@@ -1017,7 +1023,7 @@ play_shared_link() {
 	fi
 	
 	read -p "< Press Enter>"
-	sleep 2
+	#sleep 2
 }
 
 make_playlist() {
