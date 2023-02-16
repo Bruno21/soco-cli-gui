@@ -867,14 +867,6 @@ play_local_audio_dir() {
 
 	param="$*"
 
-	if ! command -v mediainfo &> /dev/null; then
-		echo "Install mediainfo to display media tags !"
-		echo -e "${italic}brew install mediainfo${reset}"
-		mediainfo=false
-	else
-		mediainfo=true
-	fi
-	
 	if [ -n "$param" ]; then							     # fichier passé en param 
 		
 		if [ -d "$param" ]; then		
@@ -900,8 +892,6 @@ play_local_audio_dir() {
 	else
 	
     	if [ $fzf_bin -eq 1 ]; then
- 			#header=" Choose a target speaker for this alarm"
- 			#prompt="Choose a target speaker for this alarm: "
  		
 			fzf_music_folder_args=(
     			--border
@@ -1016,7 +1006,14 @@ play_shared_link() {
 	for i in ${music_uri[@]}; do
 		[[ "$sl" == *"$i"* ]] && s_link=$sl
 	done
-	if [ -n "$s_link" ]; then
+	
+	status_uri=$(curl -sS  -I ${s_link}  2> /dev/null | head -n 1 | cut -d' ' -f2-)
+	status_uri="${status_uri//[$'\t\r\n ']}"
+	#echo $status_w_desc
+	
+	#[ $status_uri -eq 200 ] && echo "ok"
+	if [ $status_uri -eq 200 ]; then
+	#if [ -n "$s_link" ]; then
 		queue=$(sonos $loc $device sharelink "$sl")
 		sonos $loc $device play_from_queue $queue
 	else
