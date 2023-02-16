@@ -49,6 +49,15 @@ if (! type fzf > /dev/null 2>&1); then fzf_bin=0
 else fzf_bin=1
 fi
 
+if ! command -v mediainfo &> /dev/null; then
+	echo "Install mediainfo to display media tags !"
+	echo -e "${italic}brew install mediainfo${reset}"
+	mediainfo=false
+else
+	mediainfo=true
+fi
+
+
 fzf_args=(
 	--height=8
 	--with-nth=2..
@@ -769,13 +778,6 @@ play_local_audio_file() {
 
 	param="$*"
 
-	if ! command -v mediainfo &> /dev/null; then
-		echo "Install mediainfo to display media tags !"
-		echo -e "${italic}brew install mediainfo${reset}"
-		mediainfo=false
-	else
-		mediainfo=true
-	fi
 	
 	if [ -n "$param" ]; then							     # fichier passé en param 
 	
@@ -898,8 +900,8 @@ play_local_audio_dir() {
 	else
 	
     	if [ $fzf_bin -eq 1 ]; then
- 			header=" Choose a target speaker for this alarm"
- 			prompt="Choose a target speaker for this alarm: "
+ 			#header=" Choose a target speaker for this alarm"
+ 			#prompt="Choose a target speaker for this alarm: "
  		
 			fzf_music_folder_args=(
     			--border
@@ -1034,58 +1036,97 @@ make_playlist() {
 	# GNU bash, version 3.2.57(1)-release-(x86_64-apple-darwin20)
 	#read -e -p "Choose folder to create playlist from: " folder
 	# GNU bash, version 5.1.4(1)-release (x86_64-apple-darwin19.6.0) (brew install bash)
-	read -e -i "$HOME/Music/" -p "Choose folder to create playlist from: " folder
 	
-	if [ -d "$folder" ]; then
+	fzf_bin=1
+	
+	if [ $fzf_bin -eq 1 ]; then
+			fzf_playlist_args=(
+				--multi
+    			--border
+			)
 			
-		read -e -p "Include subfolder ? (y/n) " sub
+			radio_uri+=([*No change*]="_")
+			
+			volume=$(find /Volumes $HOME -maxdepth 1 -type d -not -path '*/\.*' -print 2> /dev/null | fzf --prompt="Select a folder !" --header="ESC to quit !")
+			music=$(find $volume -type f \( -name "*.mp3" -o -name "*.mp4" -o -name "*.m4a" -o -name "*.aac" -o -name "*.flac" -o -name "*.ogg" -o -name "*.wma" -o -name "*.wav" \) -print 2> /dev/null | fzf "${fzf_playlist_args[@]}" --prompt="Select some music files!" --header="Tab / Shift+Tab to select and Enter")
+			liste_pl="$music"	
+	fi
+
+	if [ -z "$liste_pl" ]; then
+		while :
+		do    
+			echo -e "${underline}Enter audio folder path${reset} (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav): "
+			read -e -i "$HOME/Music/" -p "Choose folder to create playlist from: " folder_pl
+
+			if [ -d "$folder_pl" ]; then
+
+				read -e -p "Include subfolder ? (y/n) " sub
 		
-		if [ "$sub" == "y" ] || [ "$sub" == "Y" ]; then		
-			#m3u=$(echo "$fp" | awk -F"/" '{print $NF}')	
-			if [[ "$OSTYPE" == "darwin"* ]]; then list=$(find -E "$folder" -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
-			else list=$(find "$folder" -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort); fi	
-		else
-			if [[ "$OSTYPE" == "darwin"* ]]; then list=$(find -E "$folder" -maxdepth 1 -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
-			else list=$(find "$folder" -maxdepth 1 -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort); fi
-		fi
-		
-		while [ true ] ; do
-			read -t 10 -e -p "Give a name to the playlist (without extension): " pl_name
-			if [ -n "$pl_name" ] ; then
-				break ;
-			else
-				echo "Waiting for a name !"
+				if [ "$sub" == "y" ] || [ "$sub" == "Y" ]; then		
+					if [[ "$OSTYPE" == "darwin"* ]]; then liste_pl=$(find -E "$folder_pl" -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
+					else liste_pl=$(find "$folder_pl" -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort); fi	
+				else
+					if [[ "$OSTYPE" == "darwin"* ]]; then liste_pl=$(find -E "$folder_pl" -maxdepth 1 -iregex ".*\.(mp3|mp4|m4a|aac|flac|ogg|wma|wav)" | sort)
+					else liste_pl=$(find "$folder_pl" -maxdepth 1 -iregex ".*\.\(mp3\|mp4\|m4a\|aac\|flac\|ogg\|wma\|wav\)" | sort); fi
+				fi
+					
+				if [ -n "$liste_pl" ]; then
+					audio_dir="$folder_pl"
+					break
+				else echo "No audio files founds !"
+				fi
 			fi
-		done
+			echo
+		done	
+	fi
 
-		plst="$pl_name.m3u"
-		printf "#EXTM3U\n" > "$plst"
-		echo "$list" >> "$plst"
-		
-		
-		read -e -p "Do you want to edit $plst ? (y/n) " edit	
-		if [ "$edit" == "y" ] || [ "$edit" == "Y" ]; then
-			[ -n $EDITOR ] && $EDITOR "$plst" || nano "$plst"
+	echo -e "\n${greenbold}Tracks to record on playlist...${reset}"
+	printf " \e[4m%-2s\e[0m \e[4m%-25s\e[0m  \e[4m%-35s\e[0m \e[4m%-35s\e[0m \e[4m%-12s\e[0m \e[4m%-10s\e[0m \n" "N°" "Artist" "Track" "Album" "Duration" "Year"
+	
+	i=1
+	while IFS= read -r line; do	
+		if [ -f "$line" ]; then
+		#echo "$line"
+			[ "$mediainfo" = true ] && minfo "$line" "$i" || echo "mediainfo=false"
+			local _x="$album"
+			[ "$_x" != "$_y" ] && display_cover_art "$line" 
+			local _y="$_x"
+		else echo "not a file!"
 		fi
-
-		# Extract album art from .mp3
-		# ffmpeg -hide_banner -loglevel error -i 01.\ Portez\ vos\ croix.mp3 -s 300x300 album_art.jpg
-		
-		read -e -p "Do you want to play $plst ? (y/n) " play	
-		if [ "$play" == "y" ] || [ "$play" == "Y" ]; then
-			playing="Playing the ${bold_under}$plst${reset}${underline} playlist..."
-			echo -e "\n${underline}$playing${reset}"
-			pls=$(cat "$plst")
-			echo -e "\n$pls\n"
-			
-			### BUG: bloc menu avec CTRL-C ###
-			
-			echo -e "Hit CTRL-C to exit playlist \n"
-			sonos $loc $device play_m3u "$plst" pi
+		((i++))
+	done <<< "$liste_pl"
+	echo
+	
+	while [ true ] ; do
+		read -t 10 -e -p "Give a name to the playlist (without extension): " pl_name
+		if [ -n "$pl_name" ] ; then
+			break ;
+		else
+			echo -e "\nWaiting for a name !"
 		fi
+	done
 
-	else
-		echo "Folder $folder doesn't exist !'"
+	plst="$pl_name.m3u"
+	
+	printf "#EXTM3U\n" > "$plst"
+	echo "$liste_pl" >> "$plst"
+			
+	read -e -p "Do you want to edit $plst ? (y/n) " edit	
+	if [ "$edit" == "y" ] || [ "$edit" == "Y" ]; then
+		[ -n $EDITOR ] && $EDITOR "$plst" || nano "$plst"
+	fi
+		
+	read -e -p "Do you want to play $plst ? (y/n) " play	
+	if [ "$play" == "y" ] || [ "$play" == "Y" ]; then
+		playing="Playing the ${bold_under}$plst${reset}${underline} playlist..."
+		echo -e "\n${underline}$playing${reset}"
+		pls=$(cat "$plst")
+		echo -e "\n$pls\n"
+			
+		### BUG: bloc menu avec CTRL-C ###
+			
+		echo -e "Hit CTRL-C to exit playlist \n"
+		sonos $loc $device play_m3u "$plst" pi
 	fi
 }
 
