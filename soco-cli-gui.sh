@@ -104,6 +104,24 @@ devices() {
 
 function is_int() { test "$@" -eq "$@" 2> /dev/null; } 
 
+curl_url() {
+	status_uri=
+	icy_name=
+	q=$(curl -sS  -I $1 2> /dev/null)
+	echo "$q"
+	
+	status_uri=$(echo "$q" | head -n 1 | cut -d' ' -f2)
+	icy_name=$(echo "$q" | grep '^icy-name' | awk -F ':' '{print $2}')
+	# HTTP/1.1 200 OK / classicfm
+	# HTTP/2 200 / FIP
+	#status_uri=$(curl -sS  -I ${url}  2> /dev/null | head -n 1 | cut -d' ' -f2)	# 200
+	#status_uri=$(curl -sS  -I ${url}  2> /dev/null | head -n 1 | cut -d' ' -f2-) # 200 OK
+	
+	#echo "$status_uri"
+	#echo "$icy_name"
+	status_uri="${status_uri//[$'\t\r\n ']}"
+	icy_name="${icy_name//[$'\t\r\n ']}"
+}
 
 # Main Menu
 
@@ -752,18 +770,18 @@ minfo () {
 # Display cover art from audio file (mp3, flac)
 # Require exiftool (or ffmpeg) and a compatible terminal (iTerm2)
 display_cover_art() {
-		if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
-			if command -v exiftool &> /dev/null; then
-				#ffmpeg -i "$audio_file" -an -c:v copy /tmp/cover.jpg
-				# https://exiftool.org/forum/index.php?topic=3856.0
-				export LC_CTYPE=fr_FR.UTF-8
-				export LC_ALL=fr_FR.UTF-8
-				#exiftool -a -G4 "-picture*" "$1"
-				exiftool -picture -b "$1"  > /tmp/cover.png
+	if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
+		if command -v exiftool &> /dev/null; then
+			#ffmpeg -i "$audio_file" -an -c:v copy /tmp/cover.jpg
+			# https://exiftool.org/forum/index.php?topic=3856.0
+			export LC_CTYPE=fr_FR.UTF-8
+			export LC_ALL=fr_FR.UTF-8
+			#exiftool -a -G4 "-picture*" "$1"
+			exiftool -picture -b "$1"  > /tmp/cover.png
 				
-				[ $? == 0 ] && printf "\n\033]1337;File=;width=300px;inline=1:`cat /tmp/cover.png | base64`\a\n"
-			fi
+			[ $? == 0 ] && printf "\n\033]1337;File=;width=300px;inline=1:`cat /tmp/cover.png | base64`\a\n"
 		fi
+	fi
 }
 
 # play local file (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav)
@@ -792,8 +810,6 @@ play_local_audio_file() {
 		#fzf_bin=0
 	
     	if [ $fzf_bin -eq 1 ]; then
- 			header=" Choose a target speaker for this alarm"
- 			prompt="Choose a target speaker for this alarm: "
  		
 			fzf_music_args=(
 				--multi
@@ -1009,9 +1025,7 @@ play_shared_link() {
 	
 	status_uri=$(curl -sS  -I ${s_link}  2> /dev/null | head -n 1 | cut -d' ' -f2-)
 	status_uri="${status_uri//[$'\t\r\n ']}"
-	#echo $status_w_desc
 	
-	#[ $status_uri -eq 200 ] && echo "ok"
 	if [ $status_uri -eq 200 ]; then
 	#if [ -n "$s_link" ]; then
 		queue=$(sonos $loc $device sharelink "$sl")
@@ -1133,6 +1147,9 @@ play_artist_from_library() {
 	
 	if [ -n "$search" ]; then
 		a=$(sonos $loc $device search_artists "$search")
+		
+		# fzf
+		
 		if [ -n "$a" ]; then
 			echo -e "$a\n"
 			read -e -p "Album to play (n°): " number
@@ -1213,21 +1230,56 @@ play_track_from_library() {
 play_uri() {
 	playing=""
     echo -e "\n${bold} Play radio stream... ${reset}\n"
-    
-    read -p "Enter radio stream URL [.mp3|.aac|.m3u|.pls]: " url
-    #url="http://jazzradio.ice.infomaniak.ch/jazzradio-high.aac"
-    
-    read -p "Enter radio stream name: " title
 
-    if [[ "$url" =~ ^http ]]; then
-    	if [ -n "$title" ]; then playing="Playing $title radio stream..."
-    	else playing="Playing $url radio stream..."; fi
-    	echo -e "\n${bold} $playing ${reset}"
+ 	if [ $fzf_bin -eq 1 ]; then
+ 		header=" ESC to quit !"
+ 		prompt="Choose a radio: "
+ 		
+ 		unset radio_uri[*CHIME*]
+   		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt" --header "$header")
+		[ -n "$choice" ] && uri_fzf=${radio_uri[${choice:5}]}
+		url="$uri_fzf"
+ 	fi
+ 	echo "fzf: $uri_fzf"
+ 	
+ 
+ 	if [ -z "$uri_fzf" ]; then
+		while :
+		do    
+	
+    		read -e -p "Enter radio stream URL [.mp3|.aac|.m3u|.pls]: " -i "http://" url
+   			#url="http://jazzradio.ice.infomaniak.ch/jazzradio-high.aac"
+    
+	    	read -p "Enter radio stream name: " title
+
+			REGEX="CHIME|^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
+			if [[ "$url" =~ $REGEX ]]; then
+     		#if [[ "$url" =~ ^http ]]; then
+     			break
+    		else
+	    		echo -e "\nWrong radio stream URL !"
+    		fi
+   		done
+	fi
+	
+	# get url status ans radio's name
+	curl_url ${url}
+
+	
+	if [ $status_uri -eq 200 ]; then
+		echo "$title"
+		echo "$icy_name" # fipreggae-midfi.mp3
+		echo "$url"	# https://icecast.radiofrance.fr/fipreggae-midfi.mp3
+
+    	if [ -n "$title" ]; then playing="Playing ${title} radio stream..."
+    	elif [ -n "$icy_name" ]; then playing="Playing ${icy_name} radio stream..."
+    	else playing="Playing $url radio stream..."
+    	fi
+		echo -e "\n${bold} $playing ${reset}"
     	sonos $loc $device play_uri $url "$title"
-    else
-    	echo -e "\nWrong radio stream URL !"
-    fi
-    sleep 2
+	fi
+    
+	sleep 2
 	}
 
 # Sleep timer
