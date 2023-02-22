@@ -45,12 +45,15 @@ fzf_bin=0
 
 device=""
 
-if (! type fzf > /dev/null 2>&1); then fzf_bin=0
+if (! type fzf > /dev/null 2>&1); then 
+	echo -e "Install ${bold}fzf${reset} for a better experience !"
+	echo -e "${italic}brew install fzf${reset}"
+	fzf_bin=0
 else fzf_bin=1
 fi
 
 if ! command -v mediainfo &> /dev/null; then
-	echo "Install mediainfo to display media tags !"
+	echo -e "Install ${bold}mediainfo${reset} to display media tags !"
 	echo -e "${italic}brew install mediainfo${reset}"
 	mediainfo=false
 else
@@ -102,13 +105,13 @@ devices() {
 	nbdevices=$(echo "$discover" | grep "Sonos device(s) found" | awk '{print $1}')
 }
 
-function is_int() { test "$@" -eq "$@" 2> /dev/null; } 
+function _is_int() { test "$@" -eq "$@" 2> /dev/null; } 
 
-curl_url() {
+# Get url status ans radio's name from uri stream
+_curl_url() {
 	status_uri=
 	icy_name=
 	q=$(curl -sS  -I $1 2> /dev/null)
-	echo "$q"
 	
 	status_uri=$(echo "$q" | head -n 1 | cut -d' ' -f2)
 	icy_name=$(echo "$q" | grep '^icy-name' | awk -F ':' '{print $2}')
@@ -122,6 +125,104 @@ curl_url() {
 	status_uri="${status_uri//[$'\t\r\n ']}"
 	icy_name="${icy_name//[$'\t\r\n ']}"
 }
+
+# Read tags from mp3 file
+_minfo () {
+	info=$(mediainfo "$1")
+	
+	album=$(echo "$info" | grep -m 1 'Album ')
+	album="${album#*: }"
+	performer=$(echo "$info" | grep -m 1 'Performer')
+	performer="${performer#*: }"
+	duration=$(echo "$info" | grep -m 1 'Duration ')
+	track=$(echo "$info" | grep -m 1 'Track name ')
+	track="${track#*: }"
+	year=$(echo "$info" | grep -m 1 'Recorded date ')
+	year="${year#*: }"
+	codec=$(echo "$info" | grep -m 1 'Codec ID/Info ')
+	format=$(echo "$info" | grep -m 1 'Format ')
+	profile=$(echo "$info" | grep -m 1 'Format profile ')
+	format="${format#*: } ${profile#*: }"
+	
+	if [ -n "$2" ]; then	
+		printf " %-2s %-25s  %-35s %-35s %-12s %-10s \n" "$2" "${performer:0:35}" "${track:0:35}" "${album:0:35}" "${duration#*: }" "${year#*: }"
+	else
+		printf " %-12s  %-35s \n" "Artist:" "${performer#*: }"
+		printf " %-12s  %-35s \n" "Track:" "${track#*: }"
+		printf " %-12s  %-35s \n" "Album:" "${album#*: }"
+		printf " %-12s  %-35s \n" "Duration:" "${duration#*: }"
+		printf " %-12s  %-35s \n" "Year:" "${year#*: }"
+		if [ -n "$codec" ]; then
+			printf " %-12s  %-35s \n" "Codec:" "${codec#*: }"
+		elif [ -n "$format" ]; then
+			printf " %-12s  %-35s \n" "Format:" "${format#*: }"
+		fi
+	fi
+}
+
+# Display cover art from audio file (mp3, flac)
+# Require exiftool (or ffmpeg) and a compatible terminal (iTerm2)
+_display_cover_art() {
+
+	if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
+		cover=0
+		
+		# URL (radio,library)
+		REGEX_url="^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
+		if [[ $1 =~ $REGEX_url ]]; then
+			curl -s "$art" > /tmp/cover.png
+			[ $? == 0 ] && cover=1
+		fi
+	
+	    # local audio files
+		if [ -f "$1" ]; then
+			if command -v exiftool &> /dev/null; then
+				#ffmpeg -i "$audio_file" -an -c:v copy /tmp/cover.jpg
+				# https://exiftool.org/forum/index.php?topic=3856.0
+				export LC_CTYPE=fr_FR.UTF-8
+				export LC_ALL=fr_FR.UTF-8
+				#exiftool -a -G4 "-picture*" "$1"
+				exiftool -picture -b "$1"  > /tmp/cover.png
+				
+				[ $? == 0 ] && cover=1
+				#[ $? == 0 ] && printf "\n\033]1337;File=;width=300px;inline=1:`cat /tmp/cover.png | base64`\a\n"
+			fi
+		fi
+		
+		if [ $cover -eq 1 ] && [ -f "/tmp/cover.png" ]; then
+			printf "\n\t\033]1337;File=;width=300px;inline=1:`cat /tmp/cover.png | base64`\a\n"
+		fi
+	fi
+}
+
+# Display cover art of current
+art() {
+	art=$(sonos $loc $device album_art)
+		
+	_display_cover_art $art
+} 
+
+# Tracks list from album
+_tia() {
+	tia=$(sonos  $loc $device tracks_in_album "$1" | tail -n+4 )
+
+	artiste=$(echo "$tia" | head -1 | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | xargs)
+	album=$(echo "$tia" | head -1 | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | xargs)
+
+	#echo -e "\n\t${bold}$album${reset} from ${bold}$artiste${reset}..."
+	echo
+	
+	while IFS= read -r line; do
+	
+		index=$(echo "$line" | awk -F":" '{print $1}' | xargs)
+		track=$(echo "$line" | awk -F":" '{print $5}' | xargs -0) # -0 evite xargs: unterminated quote
+		printf "\t %3s %-40s \n" "${index}." "${track}"
+
+	done <<< "$tia"
+	
+	art
+}
+
 
 # Main Menu
 
@@ -172,7 +273,7 @@ main() {
 		for i in {3..4}
 		do
 			
-			if is_int "$main_menu"; then
+			if _is_int "$main_menu"; then
 				nth=$(($main_menu - 2))
 				nth_device=$(echo "$dev" | sed -n "${nth}p")
 				name=$(echo "${nth_device}" | awk '{print $1}')
@@ -505,7 +606,6 @@ soco() {
 
 # Playing France Info
 franceinfo() {
-	#echo "$loc"
 	playing="Playing France Info..."
 	echo -e "\n${bold} $playing ${reset}"
 	sonos $loc $device play_fav 'franceinfo' && sleep 2
@@ -718,70 +818,65 @@ play_local_m3u() {
 	
 	#plt=$(ls *.m3u*)
 	#cd /Users/bruno/Music/Shaka\ Ponk\ -\ Apelogies/CD1
-	
-	read -e -i "$HOME/" -p "Enter .m3u file path: " fp
-	
-	m3u=$(echo "$fp" | awk -F"/" '{print $NF}')
-	if [ -a "$fp" ]; then
-		echo -e "\n${underline}$m3u:${reset}"
-		pls=$(cat "$fp")
-		echo -e "\n$pls\n"
-		sonos $loc $device play_m3u "$fp" pi
-	else
-		echo -e "File ${bold}$m3u${reset} doesn't exist!"
-	fi
-}
 
-# Read tags from mp3 file
-minfo () {
-	#echo "s1: $1"
-	info=$(mediainfo "$1")
-	
-	album=$(echo "$info" | grep -m 1 'Album ')
-	album="${album#*: }"
-	performer=$(echo "$info" | grep -m 1 'Performer')
-	performer="${performer#*: }"
-	duration=$(echo "$info" | grep -m 1 'Duration ')
-	track=$(echo "$info" | grep -m 1 'Track name ')
-	track="${track#*: }"
-	year=$(echo "$info" | grep -m 1 'Recorded date ')
-	year="${year#*: }"
-	codec=$(echo "$info" | grep -m 1 'Codec ID/Info ')
-	format=$(echo "$info" | grep -m 1 'Format ')
-	profile=$(echo "$info" | grep -m 1 'Format profile ')
-	format="${format#*: } ${profile#*: }"
-	
-	if [ -n "$2" ]; then	
-		printf " %-2s %-25s  %-35s %-35s %-12s %-10s \n" "$2" "${performer:0:35}" "${track:0:35}" "${album:0:35}" "${duration#*: }" "${year#*: }"
-	else
-		printf " %-12s  %-35s \n" "Artist:" "${performer#*: }"
-		printf " %-12s  %-35s \n" "Track:" "${track#*: }"
-		printf " %-12s  %-35s \n" "Album:" "${album#*: }"
-		printf " %-12s  %-35s \n" "Duration:" "${duration#*: }"
-		printf " %-12s  %-35s \n" "Year:" "${year#*: }"
-		if [ -n "$codec" ]; then
-			printf " %-12s  %-35s \n" "Codec:" "${codec#*: }"
-		elif [ -n "$format" ]; then
-			printf " %-12s  %-35s \n" "Format:" "${format#*: }"
-		fi
-	fi
-}
+	 if [ $fzf_bin -eq 1 ]; then
+ 		header=" Choose a service"
+ 		prompt="Choose a service: "
+ 		
 
-# Display cover art from audio file (mp3, flac)
-# Require exiftool (or ffmpeg) and a compatible terminal (iTerm2)
-display_cover_art() {
-	if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
-		if command -v exiftool &> /dev/null; then
-			#ffmpeg -i "$audio_file" -an -c:v copy /tmp/cover.jpg
-			# https://exiftool.org/forum/index.php?topic=3856.0
-			export LC_CTYPE=fr_FR.UTF-8
-			export LC_ALL=fr_FR.UTF-8
-			#exiftool -a -G4 "-picture*" "$1"
-			exiftool -picture -b "$1"  > /tmp/cover.png
+		volume=$(find /Volumes $HOME -maxdepth 1 -type d -not -path '*/\.*' -print 2> /dev/null | fzf)
+		playlists=$(find $volume -type f -name "*.m3u" -print 2> /dev/null | fzf "${fzf_music_args[@]}")
+		pl_file="$playlists"
+		
+	fi		
+
+	if [ -z "$pl_file" ]; then
+		while :
+		do    
+	
+			read -e -i "$HOME/" -p "Enter .m3u file path: " fp
+			# /Users/bruno/Music/Shaka\ Ponk\ -\ Apelogies/CD1/playlist.m3u
+	
+			m3u=$(echo "$fp" | awk -F"/" '{print $NF}') # basename
+			echo "$m3u"
+			
+			if [ -f "$fp" ]; then
+				r=$(head -n1 "$fp")
+				r="${r//[$'\t\r\n ']}"
+				if [[ "$r" == "#EXTM3U" ]]; then
+					pl_file="$fp"
+					break
+				fi
+			fi	
+		done
+	fi
+	
+	#############################################
+	#############################################
+
+	echo "$pl_file"
+	
+	if [ -f "$pl_file" ]; then
+				echo -e "\n${underline}$m3u:${reset}"
+				pls=$(cat "$pl_file")
+				echo -e "\n$pls\n"
+				#sonos $loc $device play_m3u "$fp" pi
+			else
+				echo -e "File ${bold}$m3u${reset} doesn't exist!"
+	fi
+	
+	i=1
+	while IFS= read -r line; do
 				
-			[ $? == 0 ] && printf "\n\033]1337;File=;width=300px;inline=1:`cat /tmp/cover.png | base64`\a\n"
+		if [ -f "$line" ]; then
+			[ "$mediainfo" = true ] && _minfo "$line" "$i"
+			#_display_cover_art "$line" 
 		fi
-	fi
+		((i++))
+	done <<< "$audio_file"
+
+
+
 }
 
 # play local file (.mp3|.mp4|.m4a|.aac|.flac|.ogg|.wma|.wav)
@@ -843,8 +938,8 @@ play_local_audio_file() {
 	while IFS= read -r line; do
 				
 		if [ -f "$line" ]; then
-			[ "$mediainfo" = true ] && minfo "$line" "$i"
-			#display_cover_art "$line" 
+			[ "$mediainfo" = true ] && _minfo "$line" "$i"
+			#_display_cover_art "$line" 
 		fi
 		((i++))
 	done <<< "$audio_file"
@@ -856,9 +951,9 @@ play_local_audio_file() {
 		if [ -f "$line" ]; then
 			echo -e "\n${bold}Currently playing ...${reset}\n"
 			printf " %-2s %-25s  %-35s %-35s %-12s %-10s \n" "N°" "Artist" "Track" "Album" "Duration" "Year"
-			[ "$mediainfo" = true ] && minfo "${line}" "$i"
+			[ "$mediainfo" = true ] && _minfo "${line}" "$i"
 			local _x="$album"
-			[ "$_x" != "$_y" ] && display_cover_art "$line" 
+			[ "$_x" != "$_y" ] && _display_cover_art "$line" 
 			local _y="$_x"
 			
 			echo -e "\n${italic}Wait for the music to end, hit <sonos -l $device stop> from another shell or hit CTRL-C to play next track${reset}"
@@ -970,9 +1065,9 @@ play_local_audio_dir() {
 			i=1
 			while IFS= read -r line; do	
 				if [ -f "$line" ]; then
-					[ "$mediainfo" = true ] && minfo "$line" "$i"
+					[ "$mediainfo" = true ] && _minfo "$line" "$i"
 					local _x="$album"
-					[ "$_x" != "$_y" ] && display_cover_art "$line" 
+					[ "$_x" != "$_y" ] && _display_cover_art "$line" 
 					local _y="$_x"
 				fi
 				((i++))
@@ -1098,9 +1193,9 @@ make_playlist() {
 	while IFS= read -r line; do	
 		if [ -f "$line" ]; then
 		#echo "$line"
-			[ "$mediainfo" = true ] && minfo "$line" "$i" || echo "mediainfo=false"
+			[ "$mediainfo" = true ] && _minfo "$line" "$i" || echo "mediainfo=false"
 			local _x="$album"
-			[ "$_x" != "$_y" ] && display_cover_art "$line" 
+			[ "$_x" != "$_y" ] && _display_cover_art "$line" 
 			local _y="$_x"
 		else echo "not a file!"
 		fi
@@ -1140,6 +1235,159 @@ make_playlist() {
 		sonos $loc $device play_m3u "$plst" pi
 	fi
 }
+
+search_artist_from_library() {
+	
+	echo
+	
+	fzf_bin=0
+	if [ $fzf_bin -eq 1 ]; then
+ 		
+		fzf_music_folder_args=(
+    		--border
+    		--exact
+			)
+		
+		#art=$(soco $loc $device list_artists | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		art=$(cat list_artists.txt | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+	fi
+	
+	if [ -z "$art" ]; then
+		#art=$(soco $loc $device list_artists | tail -n+4)
+		art=$(cat list_artists.txt | tail -n+4)
+		
+		while :
+		do    
+			read -e -p "Search artist in library: " search
+		
+			x=$(echo "$art" | grep -i $search)
+			echo -e "$x\n"
+
+			while :
+			do    
+			
+				read -e -p "Choose index of artist or q to re-search: " research
+			
+				if [ $research != "q" ]; then
+					art=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
+					#echo "$art"
+	
+					[ -n "$art" ] && break 2
+				else break
+				fi	
+			done	
+		done
+	fi
+
+	artiste=$(echo "$art" | awk -F":" '{print $2}' | xargs)
+	index=$(echo "$art" | awk -F":" '{print $1}' | xargs)
+
+	if [ $fzf_bin -eq 1 ]; then
+ 		
+		fzf_music_folder_args=(
+    		--border
+    		--exact
+			)
+		
+		#art=$(soco $loc $device list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		alb=$(cat list_albums.txt | tail -n+4 | grep -i "$artiste" | fzf "${fzf_music_folder_args[@]}")
+	fi
+
+	if [ -z "$alb" ]; then
+		#art=$(soco $loc $device list_artists | tail -n+4)
+		alb=$(cat list_albums.txt | tail -n+4 | grep -i "$artiste")
+		
+	fi
+	echo -e "\n${underline}Albums from $artiste:${reset}"
+	echo "$alb"
+	
+	while :
+	do    	
+		read -e -p "Choose index of album or q to re-search: " research
+			
+		if [ $research != "q" ]; then
+			alb=$(echo "$alb" | grep -E ^[[:blank:]]+"$research:")
+	
+			[ -n "$alb" ] && break
+		else break
+		fi	
+	done	
+
+	artiste=$(echo "$alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | xargs)
+	album=$(echo "$alb" | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | xargs)
+	index=$(echo "$alb" | awk -F":" '{print $1}' | xargs)
+
+	echo -e "\nAdding ${bold}$album${reset} from ${bold}$artiste${reset} to queue and playing..."
+	
+	#list_queue
+	
+	w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
+	_tia "$album"
+
+}
+
+search_album_from_library() {
+	
+	echo
+	
+	fzf_bin=0
+	if [ $fzf_bin -eq 1 ]; then
+ 		
+		fzf_music_folder_args=(
+    		--border
+    		--exact
+			)
+		
+		#art=$(soco $loc $device list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		alb=$(cat list_albums.txt | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+	fi
+	
+	if [ -z "$art" ]; then
+		#art=$(soco $loc $device list_artists | tail -n+4)
+		alb=$(cat list_albums.txt | tail -n+4)
+		
+		while :
+		do    
+			read -e -p "Search album in library: " search
+		
+			x=$(echo "$alb" | grep -i $search)
+			echo -e "$x\n"
+
+			while :
+			do    
+			
+				read -e -p "Choose index of album or q to re-search: " research
+			
+				if [ $research != "q" ]; then
+					alb=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
+	
+					[ -n "$alb" ] && break 2
+				else break
+				fi	
+			done	
+		done
+	fi
+
+
+	
+	#sonos $loc $device clear_queue : $device queue_album "$album" : $device play_from_queue > /dev/null
+	#sonos $device queue_album "$album" next : $device play_from_queue # ajoute en pos 2  et joue
+
+	sonos  $loc $device queue_album "$album" first : $device play_from_queue # ajoute en pos 1  et joue
+
+	sonos $loc $device list_queue
+
+}
+
+
+in_progress() {
+
+	# shazam 1648
+	soco -l Salon track
+	soco -l Salon album_art
+
+}
+
 
 # Search artist in library -> add album to queue -> play it
 play_artist_from_library() {
@@ -1226,7 +1474,7 @@ play_track_from_library() {
 	fi
 	}
 
-# Play URI
+# Play URI stream
 play_uri() {
 	playing=""
     echo -e "\n${bold} Play radio stream... ${reset}\n"
@@ -1239,9 +1487,7 @@ play_uri() {
    		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt" --header "$header")
 		[ -n "$choice" ] && uri_fzf=${radio_uri[${choice:5}]}
 		url="$uri_fzf"
- 	fi
- 	echo "fzf: $uri_fzf"
- 	
+ 	fi 	
  
  	if [ -z "$uri_fzf" ]; then
 		while :
@@ -1253,24 +1499,23 @@ play_uri() {
 	    	read -p "Enter radio stream name: " title
 
 			REGEX="CHIME|^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
-			if [[ "$url" =~ $REGEX ]]; then
-     		#if [[ "$url" =~ ^http ]]; then
-     			break
-    		else
-	    		echo -e "\nWrong radio stream URL !"
+			if [[ "$url" =~ $REGEX ]]; then break
+    		else echo -e "\nWrong radio stream URL !"
     		fi
    		done
 	fi
 	
+	# Get title from url in radio_uri array
+	for k in "${!radio_uri[@]}"; do
+   		[[ ${radio_uri[$k]} == $url ]] && title="$k"
+	done
+
 	# get url status ans radio's name
-	curl_url ${url}
-
+	_curl_url ${url}
 	
+	# valid radio stream
 	if [ $status_uri -eq 200 ]; then
-		echo "$title"
-		echo "$icy_name" # fipreggae-midfi.mp3
-		echo "$url"	# https://icecast.radiofrance.fr/fipreggae-midfi.mp3
-
+		_display_cover_art $url
     	if [ -n "$title" ]; then playing="Playing ${title} radio stream..."
     	elif [ -n "$icy_name" ]; then playing="Playing ${icy_name} radio stream..."
     	else playing="Playing $url radio stream..."
@@ -2646,7 +2891,7 @@ cli_help(){
 	printf "| ${bold}%-25s${reset} | %-126s \n" "about" "About soco-cli-gui"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "help" "Help soco-cli-gui"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "inform" "Device informations"
-	#printf "| ${bold}%-25s${reset} | %-126s \n" "minfo" ""
+	#printf "| ${bold}%-25s${reset} | %-126s \n" "_minfo" ""
 	printf "| ${bold}%-25s${reset} | %-126s \n" "sysinfo" "Prints a table of information about all speakers in the system."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "shazam" "Identify current playing track, like Shazam"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "alarms" "List all of the alarms in the Sonos system."
