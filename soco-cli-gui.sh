@@ -197,19 +197,19 @@ _display_cover_art() {
 
 # Display cover art of current
 art() {
-	art=$(sonos $loc $device album_art)
-		
-	_display_cover_art $art
+	art=$(sonos $loc $device album_art 2>/dev/null)
+	if [ -n "$art" ]; then
+		_display_cover_art $art
+	fi
 } 
 
 # Tracks list from album
 _tia() {
 	tia=$(sonos  $loc $device tracks_in_album "$1" | tail -n+4 )
 
-	artiste=$(echo "$tia" | head -1 | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | xargs)
-	album=$(echo "$tia" | head -1 | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | xargs)
-
-	#echo -e "\n\t${bold}$album${reset} from ${bold}$artiste${reset}..."
+	artiste=$(echo "$tia" | head -1 | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | xargs -0)
+	album=$(echo "$tia" | head -1 | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | xargs -0)
+	
 	echo
 	
 	while IFS= read -r line; do
@@ -1239,7 +1239,6 @@ make_playlist() {
 search_artist_from_library() {
 	
 	echo
-	
 	fzf_bin=0
 	if [ $fzf_bin -eq 1 ]; then
  		
@@ -1248,39 +1247,42 @@ search_artist_from_library() {
     		--exact
 			)
 		
-		#art=$(soco $loc $device list_artists | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
-		art=$(cat list_artists.txt | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		art=$(sonos $loc $device list_artists | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
 	fi
 	
+	echo "$art"
+	
 	if [ -z "$art" ]; then
-		#art=$(soco $loc $device list_artists | tail -n+4)
-		art=$(cat list_artists.txt | tail -n+4)
+		art=$(sonos $loc $device list_artists | tail -n+4)
 		
 		while :
 		do    
 			read -e -p "Search artist in library: " search
 		
-			x=$(echo "$art" | grep -i $search)
-			echo -e "$x\n"
+			if [ -n "$search" ]; then
+				x=$(echo "$art" | grep -i $search)
+				echo -e "$x\n"
+			fi
 
-			while :
-			do    
+			if [ -n "$x" ]; then
+				while :
+				do    
+					read -e -p "Choose index of artist or q to re-search: " research
 			
-				read -e -p "Choose index of artist or q to re-search: " research
-			
-				if [ $research != "q" ]; then
-					art=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
-					#echo "$art"
+					if [ "$research" != "q" ] && [ -n "$research" ]; then
+						art=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
 	
-					[ -n "$art" ] && break 2
-				else break
-				fi	
-			done	
+						[ -n "$art" ] && break 2
+					else break
+					fi	
+				done
+			fi	
 		done
 	fi
 
-	artiste=$(echo "$art" | awk -F":" '{print $2}' | xargs)
-	index=$(echo "$art" | awk -F":" '{print $1}' | xargs)
+
+	artiste=$(echo "$art" | awk -F":" '{print $2}' | xargs -0)
+	#index=$(echo "$art" | awk -F":" '{print $1}' | xargs)
 
 	if [ $fzf_bin -eq 1 ]; then
  		
@@ -1289,48 +1291,51 @@ search_artist_from_library() {
     		--exact
 			)
 		
-		#art=$(soco $loc $device list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
-		alb=$(cat list_albums.txt | tail -n+4 | grep -i "$artiste" | fzf "${fzf_music_folder_args[@]}")
+		l_alb=$(sonos $loc $device list_albums | tail -n+4 | grep -i "$artiste" | fzf "${fzf_music_folder_args[@]}")
 	fi
 
-	if [ -z "$alb" ]; then
-		#art=$(soco $loc $device list_artists | tail -n+4)
-		alb=$(cat list_albums.txt | tail -n+4 | grep -i "$artiste")
-		
-	fi
-	echo -e "\n${underline}Albums from $artiste:${reset}"
-	echo "$alb"
-	
-	while :
-	do    	
-		read -e -p "Choose index of album or q to re-search: " research
+	if [ -z "$l_alb" ]; then
+		l_alb=$(sonos $loc $device list_albums | tail -n+4 | grep -i "$artiste")
+	#fi
+		echo -e "\n${underline}Albums from $artiste:${reset}"
+		echo -e "$l_alb\n"
+		if [ -n "$l_alb" ]; then
+			while :
+			do    	
+				read -e -p "Choose index of album or (q) to quit: " research
 			
-		if [ $research != "q" ]; then
-			alb=$(echo "$alb" | grep -E ^[[:blank:]]+"$research:")
+				if [ "$research" != "q" ]; then
+					alb=$(echo "$l_alb" | grep -E ^[[:blank:]]+"$research:")
 	
-			[ -n "$alb" ] && break
-		else break
+					[ -n "$alb" ] && break
+				else break
+				fi	
+			done
+		else echo -e "No albums from ${bold}$artiste${reset} found !"
 		fi	
-	done	
-
-	artiste=$(echo "$alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | xargs)
-	album=$(echo "$alb" | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | xargs)
-	index=$(echo "$alb" | awk -F":" '{print $1}' | xargs)
-
-	echo -e "\nAdding ${bold}$album${reset} from ${bold}$artiste${reset} to queue and playing..."
+	else
+		alb="$l_alb"
+	fi
 	
-	#list_queue
+	if [ -n "$alb" ]; then
+		artiste=$(echo "$alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+		album=$(echo "$alb" | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//') # xargs: unterminated quote
+		#index=$(echo "$alb" | awk -F":" '{print $1}' | xargs)
+		
+		echo -e "\nAdding ${bold}$album${reset} from ${bold}$artiste${reset} to queue and playing..."
 	
-	w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
-	_tia "$album"
-
+		#list_queue
+	
+		w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
+		_tia "$album"
+	fi
 }
 
 search_album_from_library() {
 	
 	echo
 	
-	fzf_bin=0
+	#fzf_bin=0
 	if [ $fzf_bin -eq 1 ]; then
  		
 		fzf_music_folder_args=(
@@ -1350,21 +1355,27 @@ search_album_from_library() {
 		do    
 			read -e -p "Search album in library: " search
 		
-			x=$(echo "$alb" | grep -i $search)
-			echo -e "$x\n"
-
-			while :
-			do    
+			if [ -n "$search" ]; then
+				x=$(echo "$alb" | grep -i $search)
+				echo -e "$x\n"
+			fi
 			
-				read -e -p "Choose index of album or q to re-search: " research
+			if [ -n "$x" ]; then
 			
-				if [ $research != "q" ]; then
-					alb=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
+				while :
+				do    
+			
+					read -e -p "Choose index of album or (q) to re-search: " research
+			
+					if [ "$research" != "q" ] && [ -n "$research" ]; then
+						alb=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
 	
-					[ -n "$alb" ] && break 2
-				else break
-				fi	
-			done	
+						[ -n "$alb" ] && break 2
+					else break
+					fi	
+				done
+			else echo -e "No albums ${bold}$search${reset} found !"
+			fi	
 		done
 	fi
 
@@ -1373,9 +1384,23 @@ search_album_from_library() {
 	#sonos $loc $device clear_queue : $device queue_album "$album" : $device play_from_queue > /dev/null
 	#sonos $device queue_album "$album" next : $device play_from_queue # ajoute en pos 2  et joue
 
-	sonos  $loc $device queue_album "$album" first : $device play_from_queue # ajoute en pos 1  et joue
+	#sonos  $loc $device queue_album "$album" first : $device play_from_queue # ajoute en pos 1  et joue
 
-	sonos $loc $device list_queue
+	#sonos $loc $device list_queue
+	
+	if [ -n "$alb" ]; then
+		artiste=$(echo "$alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+		album=$(echo "$alb" | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//') # xargs: unterminated quote
+		#index=$(echo "$alb" | awk -F":" '{print $1}' | xargs)
+		
+		echo -e "\nAdding ${bold}$album${reset} from ${bold}$artiste${reset} to queue and playing..."
+	
+		#list_queue
+	
+		w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
+		_tia "$album"
+	fi
+
 
 }
 
@@ -1388,63 +1413,6 @@ in_progress() {
 
 }
 
-
-# Search artist in library -> add album to queue -> play it
-play_artist_from_library() {
-	read -e -p "Search artist in library: " search
-	
-	if [ -n "$search" ]; then
-		a=$(sonos $loc $device search_artists "$search")
-		
-		# fzf
-		
-		if [ -n "$a" ]; then
-			echo -e "$a\n"
-			read -e -p "Album to play (n°): " number
-	
-			if [[ "$number" =~ ^[+-]?[0-9]+$ ]]; then
-				b=$(echo "$a" | grep -m 1 "$number: ")
-				album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
-				artist=$(echo "$b" | awk -F ": " '{print $4}')
-
-				playing="Playing $album from $artist..."
-	    		echo -e "\n${bold} $playing ${reset}"
-	
-				sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
-			else echo "Please, enter the number of the album to play !"
-			fi
-		else echo -e "Artist ${underline}$search${reset} was not found !"
-		fi
-	else echo "Empty query !"
-	fi
-	}
-
-# Search album in library -> add to queue -> play it
-play_album_from_library() {
-	read -e -p "Search album in library: " search
-
-	if [ -n "$search" ]; then	
-		a=$(sonos $loc $device search_albums "$search")
-		if [ -n "$a" ]; then
-			echo -e "$a\n"
-			read -e -p "Album to play (n°): " number
-	
-			if [[ "$number" =~ ^[+-]?[0-9]+$ ]]; then
-				b=$(echo "$a" | grep -m 1 "$number: ")	
-				album=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
-				artist=$(echo "$b" | awk -F ": " '{print $4}')
-	
-				playing="Playing $album from $artist..."
-		    	echo -e "\n${bold} $playing ${reset}"
-
-				sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
-			else echo "Please, enter the number of the album to play !"
-			fi
-		else echo -e "Album ${underline}$search${reset} was not found !"
-		fi			
-	else echo "Empty query !"
-	fi
-	}
 
 # Search track in library -> add to queue -> play it
 play_track_from_library() {
@@ -1836,6 +1804,7 @@ list_favs() {
 list_queue() {
     echo -e "\n${bold} Queue... ${reset}"
     q=$(sonos $loc $device list_queue)
+    q=$(echo "$q" | head -n75)
     echo -e "\n $q \n"
     read -p "< Press Enter>"
 	}
