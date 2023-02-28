@@ -588,8 +588,8 @@ soco() {
 			47) play_local_audio_file;;	
 			48) play_local_dir;;
 			49) play_shared_link;;	
-			50|b|B) play_album_from_library;;
-			51|x|X) play_artist_from_library;;
+			50|b|B) search_album_from_library;;
+			51|x|X) search_artist_from_library;;
 			52|y|Y) play_track_from_library;;
 			53) play_uri;;
 			54) make_playlist;;
@@ -1343,8 +1343,8 @@ search_album_from_library() {
     		--exact
 			)
 		
-		#art=$(soco $loc $device list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
-		alb=$(cat list_albums.txt | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		art=$(soco $loc $device list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		#alb=$(cat list_albums.txt | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
 	fi
 	
 	if [ -z "$art" ]; then
@@ -1415,32 +1415,68 @@ in_progress() {
 
 
 # Search track in library -> add to queue -> play it
-play_track_from_library() {
-	read -e -p "Search track in library: " search
-	
-	if [ -n "$search" ]; then	
-		a=$(sonos $loc $device search_tracks "$search")
-		if [ -n "$a" ]; then
-			echo -e "$a\n"
-			read -e -p "Track to play: " number
+search_tracks_from_library() {
 
-			if [[ "$number" =~ ^[+-]?[0-9]+$ ]]; then
-				b=$(echo "$a" | grep -m 1 "$number: ")
-				# 1: Artist: Alain Souchon | Album: Collection (1984-2001) | Title: J'veux du cuir	
-				track=$(echo "$b" | awk -F ": " '{print $5}')
-				artist=$(echo "$b" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/ *$//g')
-
-				playing="Playing $track from $artist..."
-		    	echo -e "\n${bold} $playing ${reset}"
+	while :
+	do    
+		echo
+		read -e -p "Search track in library: " search
 	
-				sonos $loc $device queue_search_result_number $number first : $device play_from_queue > /dev/null
-			else echo "Please, enter the number of the track to play !"
+		if [ -n "$search" ]; then	
+
+			tracks=$(sonos $loc $device search_tracks "$search" | tail -n+4)
+			#tracks=$(cat search_tracks.txt| tail -n+4)
+			nb=$(echo -n "$tracks" | grep -c '^')
+		
+			if [ "$nb" -gt 0 ]; then
+	
+				if [ $fzf_bin -eq 1 ]; then
+ 		
+					fzf_music_folder_args=(
+    					--border
+	    				--exact
+	    				--header="ENTER for select; ESC for a new search"
+						)
+					trk=$(echo "$tracks" | fzf "${fzf_music_folder_args[@]}")
+					[ -n "$trk" ] && break
+			
+				else
+					[ "$nb" -gt 1 ] && echo "Tracks found:" || echo "Track found:"
+					echo -e "$tracks\n"
+		
+					while :
+					do
+						read -e -p "Choose index of track or (q) to re-search: " research
+			
+						if [ "$research" != "q" ] && [ -n "$research" ]; then
+							trk=$(echo "$tracks" | grep -E ^[[:blank:]]+"$research:")
+							[ -n "$trk" ] && break 2 || echo "Wrong Choice !"
+							
+						else break
+						fi	
+					done
+
+				fi
 			fi
-		else echo -e "Track ${underline}$search${reset} was not found !"
-		fi			
-	else echo "Empty query !"
+		fi
+	done
+				
+	if [ -n "$trk" ]; then
+		
+		track=$(echo "$trk" | awk -F ": " '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+		artist=$(echo "$trk" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+		album=$(echo "$trk" | awk -F ": " '{print $4}' | awk -F "|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+		title=$(echo "$trk" | awk -F ": " '{print $5}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+		
+		echo -e "\nPlaying ${bold}$title${reset} from album ${bold}$album${reset} of ${bold}$artist${reset}..."
+		
+		sonos $loc $device queue_search_result_number $track first : $device play_from_queue > /dev/null
+		
+		art			
 	fi
-	}
+	
+}
+
 
 # Play URI stream
 play_uri() {
