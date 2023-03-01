@@ -590,7 +590,7 @@ soco() {
 			49) play_shared_link;;	
 			50|b|B) search_album_from_library;;
 			51|x|X) search_artist_from_library;;
-			52|y|Y) play_track_from_library;;
+			52|y|Y) search_tracks_from_library;;
 			53) play_uri;;
 			54) make_playlist;;
 			55|j|J) sleeep;;
@@ -1296,7 +1296,7 @@ search_artist_from_library() {
 
 	if [ -z "$l_alb" ]; then
 		l_alb=$(sonos $loc $device list_albums | tail -n+4 | grep -i "$artiste")
-	#fi
+
 		echo -e "\n${underline}Albums from $artiste:${reset}"
 		echo -e "$l_alb\n"
 		if [ -n "$l_alb" ]; then
@@ -1333,23 +1333,20 @@ search_artist_from_library() {
 
 search_album_from_library() {
 	
-	echo
-	
-	#fzf_bin=0
 	if [ $fzf_bin -eq 1 ]; then
  		
 		fzf_music_folder_args=(
     		--border
     		--exact
+    		--header="ENTER for select album; ESC for a new search"
 			)
 		
-		art=$(soco $loc $device list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
-		#alb=$(cat list_albums.txt | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		alb=$(sonos $loc $device list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
 	fi
 	
-	if [ -z "$art" ]; then
-		#art=$(soco $loc $device list_artists | tail -n+4)
-		alb=$(cat list_albums.txt | tail -n+4)
+	
+	if [ -z "$alb" ]; then
+		alb=$(sonos $loc $device list_albums | tail -n+4)
 		
 		while :
 		do    
@@ -1359,6 +1356,8 @@ search_album_from_library() {
 				x=$(echo "$alb" | grep -i $search)
 				echo -e "$x\n"
 			fi
+			
+			echo
 			
 			if [ -n "$x" ]; then
 			
@@ -1379,14 +1378,6 @@ search_album_from_library() {
 		done
 	fi
 
-
-	
-	#sonos $loc $device clear_queue : $device queue_album "$album" : $device play_from_queue > /dev/null
-	#sonos $device queue_album "$album" next : $device play_from_queue # ajoute en pos 2  et joue
-
-	#sonos  $loc $device queue_album "$album" first : $device play_from_queue # ajoute en pos 1  et joue
-
-	#sonos $loc $device list_queue
 	
 	if [ -n "$alb" ]; then
 		artiste=$(echo "$alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
@@ -1400,7 +1391,6 @@ search_album_from_library() {
 		w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
 		_tia "$album"
 	fi
-
 
 }
 
@@ -1435,7 +1425,7 @@ search_tracks_from_library() {
 					fzf_music_folder_args=(
     					--border
 	    				--exact
-	    				--header="ENTER for select; ESC for a new search"
+	    				--header="ENTER for select track; ESC for a new search"
 						)
 					trk=$(echo "$tracks" | fzf "${fzf_music_folder_args[@]}")
 					[ -n "$trk" ] && break
@@ -2902,14 +2892,14 @@ cli_help(){
 	printf "| ${bold}%-25s${reset} | %-126s \n" "alarms" "List all of the alarms in the Sonos system."
 
 	echo -e "\n${greenbold}Play${reset}"
-	printf "| ${bold}%-25s${reset} | %-126s \n" "play_album_from_library" "Search album in library -> add to queue -> play."
-	printf "| ${bold}%-25s${reset} | %-126s \n" "play_artist_from_library" "Search artist in library -> add to queue -> play."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "search_album_from_library" "Search album in library -> add to queue -> play."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "search_artist_from_library" "Search artist in library -> add to queue -> play."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_local_dir" "Play all of the audio files in the specified local directory (does not traverse into subdirectories)"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_local_file" "Play MP3, M4A, MP4, FLAC, OGG, WMA, WAV, or AIFF audio files from your computer. Multiple filenames can be provided and will be played in sequence."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_local_m3u" "Plays a local M3U/M3U8 playlist consisting of local audio files (in supported audio formats)"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_radio_from_tunein" "Play favorite from TuneIn radio."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_shared_link" "Play a shared link from Deezer,Spotify, Tidal or Apple Music."
-	printf "| ${bold}%-25s${reset} | %-126s \n" "play_track_from_library" "Search track in library -> add to queue -> play."
+	printf "| ${bold}%-25s${reset} | %-126s \n" "search_track_from_library" "Search track in library -> add to queue -> play."
 	printf "| ${bold}%-25s${reset} | %-126s \n" "play_uri" "Plays the audio object given by the <uri> parameter (e.g., a radio stream URL)"
 
 	echo -e "\n${greenbold}Alarms${reset}"
