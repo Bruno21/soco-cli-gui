@@ -26,7 +26,8 @@ reset="\033[0m"
 
 list="local"
 if [ "$list" = "discovery" ]; then loc="";
-else loc=" -l"; fi
+else loc="-l"; fi
+#else loc=" -l"; fi
 
 # Needed to get the soco-cli update
 # add_your_token_below
@@ -197,7 +198,7 @@ _display_cover_art() {
 
 # Display cover art of current
 art() {
-	art=$(sonos $loc $device album_art 2>/dev/null)
+	art=$(sonos "$loc" "$device" album_art 2>/dev/null)
 	if [ -n "$art" ]; then
 		_display_cover_art $art
 	fi
@@ -205,7 +206,7 @@ art() {
 
 # Tracks list from album
 _tia() {
-	tia=$(sonos  $loc $device tracks_in_album "$1" | tail -n+4 )
+	tia=$(sonos "$loc" "$device" tracks_in_album "$1" | tail -n+4 )
 
 	artiste=$(echo "$tia" | head -1 | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | xargs -0)
 	album=$(echo "$tia" | head -1 | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | xargs -0)
@@ -470,7 +471,7 @@ help() {
 
 inform() {
 	device="$1"
-	info=$(sonos $loc $device info)
+	info=$(sonos "$loc" "$device" info)
 	model_name=$(echo "$info" | grep "model_name" | awk -F"=" '{print $2}')
 	model_number=$(echo "$info" | grep "model_number" | awk -F"=" '{print $2}')
 	player_name=$(echo "$info" | grep "player_name" | awk -F"=" '{print $2}')
@@ -608,49 +609,49 @@ soco() {
 franceinfo() {
 	playing="Playing France Info..."
 	echo -e "\n${bold} $playing ${reset}"
-	sonos $loc $device play_fav 'franceinfo' && sleep 2
+	sonos "$loc" "$device" play_fav 'franceinfo' && sleep 2
 	}
 
 # Playing France Inter
 franceinter() {
 	playing="Playing France Inter..."
 	echo -e "\n${bold} $playing ${reset}"
-	sonos $loc $device play_fav 'france inter' && sleep 2
+	sonos "$loc" "$device" play_fav 'france inter' && sleep 2
 	}
 
 # Playing K6 FM
 k6fm() {
 	playing="Playing K6 FM..."
     echo -e "\n${bold} $playing ${reset}"
-    sonos $loc $device play_fav 'K6 FM' && sleep 2
+    sonos "$loc" "$device" play_fav 'K6 FM' && sleep 2
 	}
 
 # Playing Rires et Chansons
 rires() {
 	playing="Playing Rires et Chansons..."
     echo -e "\n${bold} $playing ${reset}"
-    sonos $loc $device play_fav 'Rire et Chansons' && sleep 2
+    sonos "$loc" "$device" play_fav 'Rire et Chansons' && sleep 2
 	}
 
 # Playing RTL
 rtl() {
 	playing="Playing RTL..."
     echo -e "\n${bold} $playing ${reset}"
-	sonos $loc $device play_fav 'RTL' && sleep 2
+	sonos "$loc" "$device" play_fav 'RTL' && sleep 2
 	}
 
 # Playing Deezer Flow
 deezer_flow() {
 	playing="Playing Deezer Flow..."
     echo -e "\n${bold} $playing ${reset}"
-    sonos $loc $device play_fav 'Flow' && sleep 2
+    sonos "$loc" "$device" play_fav 'Flow' && sleep 2
 	}
 
 # Playing ...
 option_7() {
 	playing="Playing..."
     echo -e "\n${bold} $playing ${reset}"
-    #sonos $loc $device play_fav '<favori>' && sleep 2
+    #sonos "$loc" "$device" play_fav '<favori>' && sleep 2
 	}
 
 ### /ADD YOUR FAVS HERE ###
@@ -659,37 +660,37 @@ option_7() {
 # Set volume to level 11
 level_11() {
     echo -e "\n${bold} Set volume to level 11... ${reset}"
-    sonos $loc $device volume 11 && sleep 2
+    sonos "$loc" "$device" volume 11 && sleep 2
 	}
 
 # Mute ON
 mute_on() {
     echo -e "\n${bold} Mute ON... ${reset}"
-    sonos $loc $device mute on && sleep 2
+    sonos "$loc" "$device" mute on && sleep 2
 	}
 
 # Set volume to level 13
 level_13() {
     echo -e "\n${bold} Set volume to level 13... ${reset}"
-    sonos $loc $device volume 13 && sleep 2
+    sonos "$loc" "$device" volume 13 && sleep 2
 	}
 
 # Mute OFF
 mute_off() {
     echo -e "\n${bold} Mute OFF... ${reset}"
-    sonos $loc $device mute off && sleep 2
+    sonos "$loc" "$device" mute off && sleep 2
 	}
 
 # Set volume to level 15
 level_15() {
     echo -e "\n${bold} Set volume to level 15... ${reset}"
-    sonos $loc $device volume 15 && sleep 2
+    sonos "$loc" "$device" volume 15 && sleep 2
 	}
 
 # Start $device
 start() {
 	playing=""
-    sonos $loc $device start
+    sonos "$loc" "$device" start
 
     on_air="$(shazam)"	# ligne 1114
 	curr=$(echo "$on_air" | sed -n '1p')
@@ -702,14 +703,14 @@ start() {
 stop() {
 	playing="Stop $device..."
     echo -e "\n${bold} Stop $device... ${reset}"
-    sonos $loc $device stop && sleep 2
+    sonos "$loc" "$device" stop && sleep 2
 	}
 
 # Pause $device
 pause() {
 	playing="Pause $device..."
     echo -e "\n${bold} Pause $device... ${reset}"
-    sonos $loc $device pause && sleep 0.5
+    sonos "$loc" "$device" pause && sleep 0.5
 	}
 
 # Previous tracks
@@ -717,8 +718,8 @@ pause() {
 prev() {
 	backup=$playing
 
-    sonos $loc $device previous 2>/dev/null
-    if [ $? > 0 ]; then
+    sonos "$loc" "$device" previous 2>/dev/null
+    if [ $? -gt 0 ]; then
     	msg="No applicable for the audio source !"
     else
     	msg="Prev. track on $device..."	# <= Shazaaam
@@ -732,8 +733,8 @@ prev() {
 next() {
 	backup=$playing
 
-    sonos $loc $device next 2>/dev/null
-    if [ $? > 0 ]; then
+    sonos "$loc" "$device" next 2>/dev/null
+    if [ $? -gt 0 ]; then
     	msg="No applicable for the audio source !"
     else
     	msg="Next. track on $device..."	# <= Shazaaam
@@ -745,21 +746,21 @@ next() {
 # Party_mode
 party_mode() {
     echo -e "\n${bold} Party mode $device... ${reset}"
-    sonos $loc $device party_mode
-    sonos $loc $device groupstatus && sleep 2
+    sonos "$loc" "$device" party_mode
+    sonos "$loc" "$device" groupstatus && sleep 2
 	}
 
 # Groupstatus
 groupstatus() {
     echo -e "\n${bold} Group status $device... ${reset}"
-    sonos $loc $device groupstatus && sleep 2
+    sonos "$loc" "$device" groupstatus && sleep 2
 	}
 
 # Ungroup_all
 ungroup_all() {
     echo -e "\n${bold} Ungroup all speakers... ${reset}"
-    sonos $loc $device ungroup_all
-    sonos $loc $device groupstatus && sleep 2
+    sonos "$loc" "$device" ungroup_all
+    sonos "$loc" "$device" groupstatus && sleep 2
 	}
 
 # Rename
@@ -767,7 +768,7 @@ rename_spk() {
     echo -e "\n${bold} Rename speaker $device... ${reset}"
     
     read -p "New name: " newname
-    sonos $loc $device rename $newname && sleep 2
+    sonos "$loc" "$device" rename $newname && sleep 2
     
     main
     #devices
@@ -776,16 +777,16 @@ rename_spk() {
 	}
 
 vol+() {
-    volume=$(sonos $loc $device volume)
+    volume=$(sonos "$loc" "$device" volume)
     vol=$((volume+$step))
-    sonos $loc $device volume $vol
+    sonos "$loc" "$device" volume $vol
     echo -e "\nSet volume to ${bold}level $vol${reset}" && sleep 0.5
 	}
 
 vol-() {
-    volume=$(sonos $loc $device volume)
+    volume=$(sonos "$loc" "$device" volume)
     vol=$((volume-$step))
-    sonos $loc $device volume $vol
+    sonos "$loc" "$device" volume $vol
     echo -e "\nSet volume to ${bold}level $vol${reset}" && sleep 0.5
 	}
 
@@ -794,7 +795,7 @@ play_radio_from_tunein() {
 	playing="Play a radio from TuneIn..."
     echo -e "\n${bold} $playing ${reset}"
 
-	list=$(sonos $loc $device favourite_radio_stations)
+	list=$(sonos "$loc" "$device" favourite_radio_stations)
 	echo -e "$list\n"
 	
 	read -p "Radio to play: " number
@@ -802,7 +803,7 @@ play_radio_from_tunein() {
 	radio=$(echo "$list" | awk 'NF' | sed "${number}q;d" | awk -F '[0-9]+:' '{print $2}' | xargs)
 	
 	playing="Play $radio from TuneIn..."
-	sonos $loc $device play_fav_radio_station_no $number
+	sonos "$loc" "$device" play_fav_radio_station_no $number
 	echo "$playing"
 	}
 
@@ -860,7 +861,7 @@ play_local_m3u() {
 				echo -e "\n${underline}$m3u:${reset}"
 				pls=$(cat "$pl_file")
 				echo -e "\n$pls\n"
-				#sonos $loc $device play_m3u "$fp" pi
+				#sonos "$loc" "$device" play_m3u "$fp" pi
 			else
 				echo -e "File ${bold}$m3u${reset} doesn't exist!"
 	fi
@@ -957,7 +958,7 @@ play_local_audio_file() {
 			local _y="$_x"
 			
 			echo -e "\n${italic}Wait for the music to end, hit <sonos -l $device stop> from another shell or hit CTRL-C to play next track${reset}"
-			sonos $loc $device play_file "$line"
+			sonos "$loc" "$device" play_file "$line"
 			echo
 		else
 			echo -e "File $line not found !"
@@ -1073,7 +1074,7 @@ play_local_audio_dir() {
 				((i++))
 			done <<< "$liste"
 			echo
-			sonos $loc $device play_directory "$dir"
+			sonos "$loc" "$device" play_directory "$dir"
 		fi		
 	fi
 
@@ -1114,17 +1115,16 @@ play_shared_link() {
 	echo -e "${underline}Enter an url:${reset} "
 	read -e -i "$music_uri_fzf" -p "? " sl
 	
-	for i in ${music_uri[@]}; do
+	for i in "${music_uri[@]}"; do
 		[[ "$sl" == *"$i"* ]] && s_link=$sl
 	done
-	
+
 	status_uri=$(curl -sS  -I ${s_link}  2> /dev/null | head -n 1 | cut -d' ' -f2-)
 	status_uri="${status_uri//[$'\t\r\n ']}"
 	
 	if [ $status_uri -eq 200 ]; then
-	#if [ -n "$s_link" ]; then
-		queue=$(sonos $loc $device sharelink "$sl")
-		sonos $loc $device play_from_queue $queue
+		queue=$(sonos "$loc" "$device" sharelink "$sl")
+		sonos "$loc" "$device" play_from_queue $queue
 	else
 		echo -e "❗ ️Invalid shared link !"
 		playing=""
@@ -1219,7 +1219,7 @@ make_playlist() {
 			
 	read -e -p "Do you want to edit $plst ? (y/n) " edit	
 	if [ "$edit" == "y" ] || [ "$edit" == "Y" ]; then
-		[ -n $EDITOR ] && $EDITOR "$plst" || nano "$plst"
+		[ -n "$EDITOR" ] && $EDITOR "$plst" || nano "$plst"
 	fi
 		
 	read -e -p "Do you want to play $plst ? (y/n) " play	
@@ -1232,7 +1232,7 @@ make_playlist() {
 		### BUG: bloc menu avec CTRL-C ###
 			
 		echo -e "Hit CTRL-C to exit playlist \n"
-		sonos $loc $device play_m3u "$plst" pi
+		sonos "$loc" "$device" play_m3u "$plst" pi
 	fi
 }
 
@@ -1247,13 +1247,13 @@ search_artist_from_library() {
     		--exact
 			)
 		
-		art=$(sonos $loc $device list_artists | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		art=$(sonos "$loc" "$device" list_artists | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
 	fi
 	
 	echo "$art"
 	
 	if [ -z "$art" ]; then
-		art=$(sonos $loc $device list_artists | tail -n+4)
+		art=$(sonos "$loc" "$device" list_artists | tail -n+4)
 		
 		while :
 		do    
@@ -1291,11 +1291,11 @@ search_artist_from_library() {
     		--exact
 			)
 		
-		l_alb=$(sonos $loc $device list_albums | tail -n+4 | grep -i "$artiste" | fzf "${fzf_music_folder_args[@]}")
+		l_alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | grep -i "$artiste" | fzf "${fzf_music_folder_args[@]}")
 	fi
 
 	if [ -z "$l_alb" ]; then
-		l_alb=$(sonos $loc $device list_albums | tail -n+4 | grep -i "$artiste")
+		l_alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | grep -i "$artiste")
 
 		echo -e "\n${underline}Albums from $artiste:${reset}"
 		echo -e "$l_alb\n"
@@ -1341,12 +1341,12 @@ search_album_from_library() {
     		--header="ENTER for select album; ESC for a new search"
 			)
 		
-		alb=$(sonos $loc $device list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
+		alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
 	fi
 	
 	
 	if [ -z "$alb" ]; then
-		alb=$(sonos $loc $device list_albums | tail -n+4)
+		alb=$(sonos "$loc" "$device" list_albums | tail -n+4)
 		
 		while :
 		do    
@@ -1414,7 +1414,7 @@ search_tracks_from_library() {
 	
 		if [ -n "$search" ]; then	
 
-			tracks=$(sonos $loc $device search_tracks "$search" | tail -n+4)
+			tracks=$(sonos "$loc" "$device" search_tracks "$search" | tail -n+4)
 			#tracks=$(cat search_tracks.txt| tail -n+4)
 			nb=$(echo -n "$tracks" | grep -c '^')
 		
@@ -1460,7 +1460,7 @@ search_tracks_from_library() {
 		
 		echo -e "\nPlaying ${bold}$title${reset} from album ${bold}$album${reset} of ${bold}$artist${reset}..."
 		
-		sonos $loc $device queue_search_result_number $track first : $device play_from_queue > /dev/null
+		sonos "$loc" "$device" queue_search_result_number $track first : $device play_from_queue > /dev/null
 		
 		art			
 	fi
@@ -1515,7 +1515,7 @@ play_uri() {
     	else playing="Playing $url radio stream..."
     	fi
 		echo -e "\n${bold} $playing ${reset}"
-    	sonos $loc $device play_uri $url "$title"
+    	sonos "$loc" "$device" play_uri $url "$title"
 	fi
     
 	sleep 2
@@ -1526,7 +1526,7 @@ sleeep() {
 	playing="Set sleep timer..."
     echo -e "\n${bold} $playing ${reset}"
   
-	status=$(sonos $loc $device status)
+	status=$(sonos "$loc" "$device" status)
 	if [[ "$status" != "STOPPED" ]]; then
 	
   		while :
@@ -1562,7 +1562,7 @@ sleeep() {
 sleeep_cancel() {
 	clear
 	echo -e "\n${bold} Cancel timer... ${reset}\n"
-	secs=$(sonos $loc $device sleep_timer)
+	secs=$(sonos "$loc" "$device" sleep_timer)
 	 
 	if [ $secs -ne 0 ]; then
 	
@@ -1572,7 +1572,7 @@ sleeep_cancel() {
 		read -p "Do you want to cancel timer [y/n] ?: " rep
 		#if [[ "$rep" == "y" ]] || [[ "$rep" == "o" ]]; then
 		if [[ "$rep" == "y" || "$rep" == "Y" || "$rep" == "o" || "$rep" == "O" ]]; then
-			sonos $loc $device sleep_timer cancel
+			sonos "$loc" "$device" sleep_timer cancel
 		fi
 	else
 		echo -e "There is currently no timer !"
@@ -1589,7 +1589,7 @@ sleeep_timer() {
     	read -p "Enter time [16:00]: " timer
 		if [[ $timer =~ ^([0-2][0-3]|[0-1][0-9]):[0-5][0-9]+$ ]];
 		then
-			sonos $loc $device sleep_at $timer
+			sonos "$loc" "$device" sleep_at $timer
 			echo -e "\n$device goes to sleep at ${bold}$timer${reset}."
 			break
 		else echo -e "\n${red}Oops!!! Please enter correct hour.${reset}";
@@ -1630,7 +1630,7 @@ sleeep_duration() {
 			#date -d @$t # linux
 			h=$(date -r $t)	# osx
 			
-			sonos $loc $device sleep_timer $duration
+			sonos "$loc" "$device" sleep_timer $duration
 			echo -e "\n$device goes to sleep in ${bold}${duration//m/mn} ($h)${reset}."
 			break
 		else echo -e "\n${red}Oops!!! Please enter correct duration.${reset}";
@@ -1669,7 +1669,7 @@ shazaaaam() {
 # 507
 
 shazam() {
-	sz=$(sonos $loc $device -n 1.0 track)
+	sz=$(sonos "$loc" "$device" -n 1.0 track)
 	
 	# http://jazzradio.ice.infomaniak.ch/jazzradio-high.aac
 	# https://www.deezer.com/en/playlist/5390258182
@@ -1733,18 +1733,18 @@ led() {
 	playing="Switch status light..."
     echo -e "\n${bold} $playing ${reset}"
 
-	led=$(sonos $loc $device status_light)
+	led=$(sonos "$loc" "$device" status_light)
 	echo -e "Status light is ${bold}$led${reset}"
 
 	if [[ "$led" == "on" ]]; then		
 		echo -e "${italic} ...Switching status light off${reset}"
 		sleep 0.5
-		sonos $loc $device status_light off
+		sonos "$loc" "$device" status_light off
 		status="OFF"
 	elif [[ "$led" == "off" ]]; then
 		echo -e "${italic} ...Switching status light on${reset}"
 		sleep 0.5
-		sonos $loc $device status_light on
+		sonos "$loc" "$device" status_light on
 		status="ON"
 	fi
 	
@@ -1813,7 +1813,7 @@ soco_lists() {
 # Favourite radio stations
 favourite_radio_stations() {
     echo -e "\n${bold} Favourite radio stations... ${reset}"
-    s=$(sonos $loc $device favourite_radio_stations)
+    s=$(sonos "$loc" "$device" favourite_radio_stations)
     echo -e "\n $s \n"
     read -p "< Press Enter>"
 	}
@@ -1821,7 +1821,7 @@ favourite_radio_stations() {
 # Favourites
 list_favs() {
     echo -e "\n${bold} Favourites... ${reset}"
-    f=$(sonos $loc $device list_favs)
+    f=$(sonos "$loc" "$device" list_favs)
     echo -e "\n $f \n"
     read -p "< Press Enter>"
 	}
@@ -1829,7 +1829,7 @@ list_favs() {
 # Queue
 list_queue() {
     echo -e "\n${bold} Queue... ${reset}"
-    q=$(sonos $loc $device list_queue)
+    q=$(sonos "$loc" "$device" list_queue)
     q=$(echo "$q" | head -n75)
     echo -e "\n $q \n"
     read -p "< Press Enter>"
@@ -1839,15 +1839,15 @@ list_queue() {
 remove_from_queue() {
     echo -e "\n${bold} Remove from queue... ${reset}"
 
-	l=$(sonos $loc $device queue_length)
+	l=$(sonos "$loc" "$device" queue_length)
 	if [ $l -ne 0 ]; then
     	while :
 		do
-			sonos $loc $device list_queue
+			sonos "$loc" "$device" list_queue
 		
 	    	read -p "Enter track to remove [3][4,7,3][5-10][1,3-6,10] or [q] to quit: " track
     		if [[ "$track" == "q" || "$track" == "Q" ]]; then break; fi
-			sonos $loc $device remove_from_queue $track		
+			sonos "$loc" "$device" remove_from_queue $track		
 		done
 	else
 		echo -e "\n${red}Queue is empty !${reset}"
@@ -1858,8 +1858,8 @@ remove_from_queue() {
 # Clear queue
 clear_queue() {
     echo -e "\n${bold} Clear queue... ${reset}"
-    sonos $loc $device clear_queue
-    q=$(sonos $loc $device queue_length)
+    sonos "$loc" "$device" clear_queue
+    q=$(sonos "$loc" "$device" queue_length)
     if [ $q -eq 0 ]; then echo "Queue is empty"; else echo "Queue is not empty"; fi
     sleep 1.5
 	}
@@ -1867,7 +1867,7 @@ clear_queue() {
 # List Artists
 list_artists() {
     echo -e "\n${bold} List artists... ${reset}"
-    a=$(sonos $loc $device list_artists | more)
+    a=$(sonos "$loc" "$device" list_artists | more)
     echo -e "\n $a \n"
     read -p "< Press Enter>"
 	}
@@ -1875,7 +1875,7 @@ list_artists() {
 # Lists Albums
 list_albums() {
     echo -e "\n${bold} List albums... ${reset}"
-    b=$(sonos $loc $device list_albums | more)
+    b=$(sonos "$loc" "$device" list_albums | more)
     echo -e "\n $b \n"
     read -p "< Press Enter>"
 	}
@@ -1885,13 +1885,13 @@ create_playlist() {
     echo -e "\n${bold} Create Sonos playlist... ${reset}"
     echo -e "\n"
     read -p "Input a name for playlist: " name
-   	sonos $loc $device create_playlist "$name"
+   	sonos "$loc" "$device" create_playlist "$name"
 	}
 
 #list_playlists
 list_playlists() {
 	 echo -e "\n${bold} List Sonos playlist... ${reset}"
-	l=$(sonos $loc $device list_playlists)
+	l=$(sonos "$loc" "$device" list_playlists)
     echo -e "\n $l \n"
     read -p "< Press Enter>"
 	}
@@ -1902,18 +1902,18 @@ delete_playlist() {
 	 
     while :
 	do
-		sonos $loc $device list_playlists
+		sonos "$loc" "$device" list_playlists
 		
     	read -p "Enter playlist <playlist> to delete or [q] to quit: " pll
     	if [[ "$pll" == "q" || "$pll" == "Q" ]]; then break; fi
-		sonos $loc $device delete_playlist $pll		
+		sonos "$loc" "$device" delete_playlist $pll		
 	done    
 	}
 
 # List tracks in all Sonos Playlists
 list_all_playlist_tracks() {
     echo -e "\n${bold} List tracks in all Sonos Playlists... ${reset}"
-   	c=$(sonos $loc $device list_all_playlist_tracks)
+   	c=$(sonos "$loc" "$device" list_all_playlist_tracks)
     echo -e "\n $c \n"
     read -p "< Press Enter>"
 	}
@@ -1924,10 +1924,10 @@ add_playlist_to_queue() {
     echo -e "\n${bold} $playing ${reset}"
 
 	echo -e "\nList of Sonos playlist:"
-	sonos $loc $device list_playlists
+	sonos "$loc" "$device" list_playlists
 	
 	read -p "Enter a playlist name: " lsp
-	sonos $loc $device add_playlist_to_queue "$lsp"
+	sonos "$loc" "$device" add_playlist_to_queue "$lsp"
 	# Give an error if empty playlist
 	}
 	
@@ -1939,16 +1939,16 @@ remove_from_playlist() {
     while :
 	do
 		echo -e "\nList of Sonos playlist:"
-		sonos $loc $device list_playlists
+		sonos "$loc" "$device" list_playlists
 	
 		read -p "Enter a playlist <name>: " lsp
-		sonos $loc $device list_playlist_tracks "$lsp"
+		sonos "$loc" "$device" list_playlist_tracks "$lsp"
 		# Error: Can't pickle <class 'soco.music_services.data_structures.MSTrack'>: attribute lookup MSTrack on soco.music_services.data_structures failed
 		# Erreur si la playlist contient des podcasts, pistes Deezer. Ok pour les mp3 dela Library.
 	
 		read -p "Enter the <number> track to remove or [q] to quit: " trk
 		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then break; fi
-		sonos $loc $device remove_from_playlist "$lsp" "$trk"
+		sonos "$loc" "$device" remove_from_playlist "$lsp" "$trk"
 		# Give an error if empty playlist
 	done
 	}
@@ -2009,7 +2009,7 @@ soco_infos() {
 # Groups
 info_groups() {
     echo -e "\n${bold} Groups... ${reset}"
-    g=$(sonos $loc $device groups)
+    g=$(sonos "$loc" "$device" groups)
 	echo -e "\n $g \n"
     read -p "< Press Enter>"
 	}
@@ -2023,7 +2023,7 @@ infos() {
 # Shares
 shares() {
     echo -e "\n${bold} Shares... ${reset}"
-    s=$(sonos $loc $device shares)
+    s=$(sonos "$loc" "$device" shares)
     echo -e "\n $s \n"
     read -p "< Press Enter>"
 	}
@@ -2031,7 +2031,7 @@ shares() {
 # Reindex
 reindex() {
     echo -e "\n${bold} Reindex shares... ${reset}"
-    y=$(sonos $loc $device reindex)
+    y=$(sonos "$loc" "$device" reindex)
     echo -e "\n $y \n"
     read -p "< Press Enter>"
 	}
@@ -2039,7 +2039,7 @@ reindex() {
 # Sysinfo
 sysinfo() {
     echo -e "\n${bold} Sysinfo... ${reset}"
-    s=$(sonos $loc $device sysinfo)
+    s=$(sonos "$loc" "$device" sysinfo)
     echo -e "\n $s \n"
     read -p "< Press Enter>"
 	}
@@ -2047,7 +2047,7 @@ sysinfo() {
 # All Zones (rooms)
 all_zones() {
     echo -e "\n${bold} All Zones... ${reset}"
-    z=$(sonos $loc $device all_zones)
+    z=$(sonos "$loc" "$device" all_zones)
     echo -e "\n $z \n"
     read -p "< Press Enter>"
 	}
@@ -2131,7 +2131,7 @@ alarms() {
 	}
 
 list_alarms() {
-    #long_ala=$(sonos $loc $device alarms)
+    #long_ala=$(sonos "$loc" "$device" alarms)
     long_ala=$(cat long_alarm.txt)
 	court_ala=$(echo "$long_ala" | cut -d "|" -f 1,2,3,4,5,6,7,8,9)
 }
@@ -2171,7 +2171,7 @@ remove_alarms() {
 				fi
 				echo "Remove alarm with <Alarm ID> $trk"
 				[ -n "$k" ] && echo "No <Alarm ID> $k !"
-				sonos $loc $device remove_alarm $trk
+				sonos "$loc" "$device" remove_alarm $trk
 				[ $? != 0 ] && echo -e "${red}Error !${reset}"
 				break
 			else
@@ -2223,7 +2223,7 @@ snooze_alarms() {
  	done
 
     if [ -n "$snooze" ]; then
-     	sonos $loc $device snooze_alarm $snooze
+     	sonos "$loc" "$device" snooze_alarm $snooze
     	[ $? != 0 ] && echo -e "${red}Error !${reset}"
     fi
     
@@ -2473,7 +2473,7 @@ modify_alarms() {
 				
    				echo $alarm_spec
    				
-   				sonos $loc $device modify_alarm $trk $alarm_spec
+   				sonos "$loc" "$device" modify_alarm $trk $alarm_spec
 				[ $? != 0 ] && echo -e "${red}Error !${reset}"
 
 				break
@@ -2504,8 +2504,8 @@ enable_alarms() {
 			if [[ $ala_id =~ "$trk" ]]; then
 				enabled=$(echo "$ala" | awk -F "|" -v var="$trk" '($2 == var) {print $7}' | xargs)
 				case $enabled in
-				Yes) sonos $loc $device disable_alarm $trk;;
-				No) sonos $loc $device enable_alarm $trk;;
+				Yes) sonos "$loc" "$device" disable_alarm $trk;;
+				No) sonos "$loc" "$device" enable_alarm $trk;;
 				esac
 				[ $? != 0 ] && echo -e "${red}Error !${reset}"
 				break
@@ -2683,8 +2683,8 @@ create_alarms() {
 	alarm_spec="$start_time,$duration,${recurrence^^},${enabled^^},$to_play,${play_mode^^},$volume,${grouped^^}"
 	echo -e "\nalarm_spec: $alarm_spec"
 	 
-  	#sonos $loc $device create_alarm "$alarm_spec"
-    a=$(sonos $loc $device create_alarm "$alarm_spec")
+  	#sonos "$loc" "$device" create_alarm "$alarm_spec"
+    a=$(sonos "$loc" "$device" create_alarm "$alarm_spec")
     echo -e "\n $a \n"			# vide
     read -p "< Press Enter>"
   	
