@@ -42,6 +42,9 @@ default_snooze=10	# 10 minutes
 # Default Sonos device
 default="Salon"
 
+# YouTube downloaded folder
+dest_yt=$HOME/Music/YouTube
+
 fzf_bin=0
 
 device=""
@@ -108,6 +111,15 @@ devices() {
 
 function _is_int() { test "$@" -eq "$@" 2> /dev/null; } 
 
+_sanitize() {
+   local s="${1?need a string}" # receive input in first argument
+   s="${s//[^[:alnum:]]/-}"     # replace all non-alnum characters to -
+   s="${s//+(-)/-}"             # convert multiple - to single -
+   s="${s/#-}"                  # remove - from start
+   s="${s/%-}"                  # remove - from end
+   echo "${s,,}"                # convert to lowercase
+}
+
 # Get url status ans radio's name from uri stream
 _curl_url() {
 	status_uri=
@@ -165,7 +177,7 @@ _minfo () {
 # Require exiftool (or ffmpeg) and a compatible terminal (iTerm2)
 _display_cover_art() {
 
-	if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
+	if [ "$(echo $__CFBundleIdentifier | grep iterm2)" ]; then
 		cover=0
 		
 		# URL (radio,library)
@@ -334,7 +346,7 @@ about() {
 	
 	#imgcat soco-cli-logo-01-large.png
 
-	if [ $(echo $__CFBundleIdentifier | grep iterm2) ]; then
+	if [ "$(echo $__CFBundleIdentifier | grep iterm2)" ]; then
 		#printf "\n\033]1337;File=;inline=1:`cat soco-cli-logo-01-large.png | base64`\a\n"
 		printf "\n\033]1337;File=;width=400px;inline=1:`cat soco-cli-logo-01-large.png | base64`\a\n"
 	else
@@ -571,7 +583,7 @@ soco() {
 			14|u|U) mute_off;;
 			15) level_15;;
 			16|+) vol+;;
-			29|o|N) pause;;
+			29|o|O) pause;;
 			30|p|P) prev;;
 			31|n|N) next;;
 			32|s|S) start;;
@@ -1404,6 +1416,113 @@ in_progress() {
 }
 
 
+search_tracks_from_youtube() {
+
+	# https://github.com/mps-youtube/yewtube
+	# https://github.com/pystardust/ytfzf
+	
+	# https://stackoverflow.com/questions/49804874/download-the-best-quality-audio-file-with-youtube-dl
+	
+	#yt-dlp ytsearch5:"the clash" --get-id --get-title
+	
+	# yt-dlp -f 'ba' -ciw --extract-audio --audio-quality 0 --audio-format aac -o "%(title)s.%(ext)s" -v --downloader aria2c 'https://www.youtube.com/watch?v=l0Q8z1w0KGY'
+	# yt-dlp -f 251 'https://www.youtube.com/watch?v=l0Q8z1w0KGY'	(webm opus)
+	# yt-dlp -f 140 'https://www.youtube.com/watch?v=l0Q8z1w0KGY' (m4a)
+	
+	# cache: ~/.cache/yt-dlp/ ~/.cache/youtube-dl/
+
+	# dl
+	# yt-dlp -- bJ9r8LMU9bQ
+	# yt-dlp -o - "https://www.youtube.com/watch?v=bJ9r8LMU9bQ" | vlc -
+	# audio='yt-dIp -f 'ba' -x --audio-format mp3'
+	# -o '%(id)s.%(ext)s'
+	# ytfzf
+
+	tmp_path=/tmp/soco-cli-gui
+	[ -d $tmp_path ] && rm -rf $tmp_path
+	mkdir $tmp_path
+	tempfile=$(mktemp)
+	youtube_dl_log=$(mktemp)
+	
+	read -e -p "Search in YouTube: " search
+
+	#yt-dlp -j "ytsearch20:$search" | jq '{"Title": .fulltitle,"URL": .webpage_url,"Id": .id,"Thumbnail": .thumbnail,"Description": .description}'  > $tempfile
+	#yt-dlp -j "ytsearch20:$search" --match-filter "description !~= '\"'" | jq -r '{"Title": .fulltitle,"URL": .webpage_url,"Id": .id,"Thumbnail": .thumbnail,"Duration": .duration_string,"Description": .description}'  > $tempfile
+	
+	yt-dlp -j "ytsearch20:$search" | jq -r '{"Title": .fulltitle,"URL": .webpage_url,"Id": .id,"Thumbnail": .thumbnail,"Duration": .duration_string,"Description": .description}' | sed 's/\\\"/*/g' > $tempfile
+	# --match-filter "description !~= '\"'" 
+	# sed -E 's/\\([][])/\\\\\1/g'
+	
+	# "Title": "Arno \"Je serais devenu un gangster sans la scène\" #INA #short",
+	# "60 Seconds Inside THE CLASH \"Rock The Casbah\""
+
+	img=$(_sanitize $search)
+	#cat $tempfile | jq
+	
+	echo
+
+	declare -a yt_urls=()
+	j=1
+
+	while read i; do
+		#echo "$i"
+		title=$(jq -r '.Title' <<< "$i")
+		url=$(jq -r '.URL' <<< "$i")
+   		idx=$(jq -r '.Id' <<< "$i")
+   		desc=$(jq -r '.Description' <<< "$i")
+   		thumb=$(jq -r '.Thumbnail' <<< "$i")
+   		duration=$(jq -r '.Duration' <<< "$i")
+		[ ${#duration} -le 2 ] && duration="0:$duration"
+   		echo -e "${bold}$j. $title${reset} ($duration)"
+   		# "Title": "Arno \"Je serais devenu un gangster sans la scène\" #INA #short",
+   		echo -e "${desc:0:200}" | fold -w 80 -s
+   		#echo "$url"
+ 		#echo "$thumb"
+  		#echo "$idx"
+   		yt_urls+=("$url")
+   		yt_titles+=("$title")
+   		yt_durations+=("$duration")
+   		
+   		if [ -n "$thumb" ]; then
+   			name="$img$j.png"
+   			magick "$thumb" -quality 75 -resize 300x300\> $tmp_path/$name
+   			
+   			if [ -f "$tmp_path/$name" ]; then
+				printf "\n\t\033]1337;File=;width=300px;inline=1:`cat $tmp_path/$name | base64`\a\n"
+			fi
+
+   		fi
+   		echo
+   		((j++))
+	done <<< $(jq -c '.' "$tempfile")
+		
+	#echo "${yt_urls[@]}"
+	nb=${#yt_urls[@]}
+	
+	while :
+	do
+    	read -e -p "Enter video number to download or q to quit: " i
+
+    	[ "$i" == "q" ] && break
+    	if ((i >= 1 && i <= $nb)); then
+        	((i=i-1))
+        	youtube_title=${yt_titles[$i]}
+        	youtube_duration=${yt_durations[$i]}
+        	youtube_url=${yt_urls[$i]} && break
+    	fi
+	done
+	
+	if [ -n "$youtube_url" ]; then
+		yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames
+		filename=$(yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames --get-filename)
+
+		echo -e "\nPlaying ${bold}$youtube_title${reset} ($youtube_duration) (Ctrl-C to quit)"
+		sonos  $loc $device play_file "$filename"
+	fi
+
+}
+
+
 # Search track in library -> add to queue -> play it
 search_tracks_from_library() {
 
@@ -2131,8 +2250,8 @@ alarms() {
 	}
 
 list_alarms() {
-    #long_ala=$(sonos "$loc" "$device" alarms)
-    long_ala=$(cat long_alarm.txt)
+    long_ala=$(sonos "$loc" "$device" alarms)
+    #long_ala=$(cat long_alarm.txt)
 	court_ala=$(echo "$long_ala" | cut -d "|" -f 1,2,3,4,5,6,7,8,9)
 }
 
@@ -2162,7 +2281,7 @@ remove_alarms() {
 			j=$(echo "$j" | sed 's/,$//')
 			k=$(echo "$k" | sed 's/,$//')
 			
-			if [[ $ala_id =~ "$trk" ]] || [[ $trk == "all" ]] || [ -n "$j" ]; then	# j non vide
+			if [[ $ala_id =~ $trk ]] || [[ $trk == "all" ]] || [ -n "$j" ]; then	# j non vide
 
 				if [ -n "$j" ]; then
 					trk=$j
@@ -2243,7 +2362,7 @@ move_alarms() {
 			break
 		else
 			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
-			if [[ $ala_id =~ "$trk" ]]; then
+			if [[ $ala_id =~ $trk ]]; then
 			
 				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
 				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
@@ -2280,7 +2399,7 @@ copy_alarms() {
 			break
 		else
 			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
-			if [[ $ala_id =~ "$trk" ]]; then
+			if [[ $ala_id =~ $trk ]]; then
 			
 				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
 				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
@@ -2337,12 +2456,12 @@ al_spec() {
 	    REGEX3="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
 	    [[ $recurrence == "_" ]] && break
     	if [[ $recurrence =~ $REGEX3 ]]; then
-    		MATCH3="${BASH_REMATCH[0]}"
+    		#MATCH3="${BASH_REMATCH[0]}"
     		break
     	else
     		REGEX32="ON_([0-6]{1,6})$"
     		if [[ $recurrence =~ $REGEX32 ]]; then
-    			MATCH32="${BASH_REMATCH[0]}"   			
+    			#MATCH32="${BASH_REMATCH[0]}"   			
 				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
 					dddddd=$(echo "$MATCH0" | awk -F"_" '{print $2}')
 					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
@@ -2448,7 +2567,7 @@ modify_alarms() {
 		else
 			ala=$(echo "$court_ala" | sed '1,3d')
 			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
-			if [[ $ala_id =~ "$trk" ]]; then
+			if [[ $ala_id =~ $trk ]]; then
 			
 				to_modify=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3","$4","$5","$6","$7","$8","$9","$10","$11}' | xargs | sed 's/ , /,/g')
 				
@@ -2471,9 +2590,9 @@ modify_alarms() {
 				
 				al_spec $start_time $duration $recurrence $enabled "$to_play" $play_mode $volume $grouped
 				
-   				echo $alarm_spec
+   				echo "$alarm_spec"
    				
-   				sonos "$loc" "$device" modify_alarm $trk $alarm_spec
+   				sonos "$loc" "$device" modify_alarm $trk "$alarm_spec"
 				[ $? != 0 ] && echo -e "${red}Error !${reset}"
 
 				break
@@ -2501,7 +2620,8 @@ enable_alarms() {
 		else
 			ala=$(echo "$court_ala" | sed '1,3d')
 			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
-			if [[ $ala_id =~ "$trk" ]]; then
+			#if [[ $ala_id =~ "$trk" ]]; then
+			if [[ $ala_id =~ $trk ]]; then
 				enabled=$(echo "$ala" | awk -F "|" -v var="$trk" '($2 == var) {print $7}' | xargs)
 				case $enabled in
 				Yes) sonos "$loc" "$device" disable_alarm $trk;;
@@ -2575,12 +2695,12 @@ create_alarms() {
     	read -e -p "Recurrence (DAILY, ONCE, WEEKDAYS, WEEKENDS, ON_DDDDDD): " -i "$recurrence_fzf" recurrence
 	    REGEX3="DAILY|ONCE|ONCE|WEEKDAYS|WEEKENDS"
     	if [[ $recurrence =~ $REGEX3 ]]; then
-    		MATCH3="${BASH_REMATCH[0]}"
+    		#MATCH3="${BASH_REMATCH[0]}"
     		break
     	else
     		REGEX32="ON_([0-6]{1,6})$"
     		if [[ $recurrence =~ $REGEX32 ]]; then
-    			MATCH32="${BASH_REMATCH[0]}"   			
+    			#MATCH32="${BASH_REMATCH[0]}"   			
 				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
 					dddddd=$(echo "$MATCH2" | awk -F"_" '{print $2}')
 					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
@@ -2740,7 +2860,7 @@ all() {
 # Switch OFF status light
 all_status_light_off() {
 	g=""
-	sasasloffslon=$(sonos _all_ status_light off)
+	sasloff=$(sonos _all_ status_light off)
 	g=$(echo "$sasloff" | grep -v "OK")
 	
 	if [ -z "$g" ]; then
