@@ -4,7 +4,7 @@
 
 _soco-cli-gui_completions()
 {
-	COMPREPLY=($(compgen -W "deezer_flow franceinfo franceinter k6fm rires rtl level_11 level_13 level_15 vol+ vol- mute_off mute_on pause next prev start stop alarms inform sysinfo play_local_file play_local_dir list_favs clear_queue list_queue alarms create_alarms move_alarms remove_alarms enable_alarms modify_alarms snooze_alarms" "${COMP_WORDS[1]}"))
+	COMPREPLY=($(compgen -W "deezer_flow franceinfo franceinter k6fm rires rtl level_11 level_13 level_15 vol+ vol- mute_off mute_on pause next prev start stop alarms inform sysinfo play_local_file play_local_dir list_favs clear_queue list_queue alarms create_alarms move_alarms remove_alarms enable_alarms modify_alarms snooze_alarms search_tracks_from_youtube" "${COMP_WORDS[1]}"))
 
 }
 

@@ -1416,6 +1416,8 @@ in_progress() {
 }
 
 
+
+
 search_tracks_from_youtube() {
 
 	# https://github.com/mps-youtube/yewtube
@@ -1437,6 +1439,18 @@ search_tracks_from_youtube() {
 	# audio='yt-dIp -f 'ba' -x --audio-format mp3'
 	# -o '%(id)s.%(ext)s'
 	# ytfzf
+	
+	APIKEY="AIzaSyBtEqykacvWuWiLqq1-eIBZBrJzAYEx_xU"
+	APIURL="https://www.googleapis.com/youtube/v3/search"
+	NORESULTS=5
+	DOWNURL="https://www.youtube.com/watch?v="
+
+	if (! type yt-dlp > /dev/null 2>&1); then 
+		echo -e "Install ${bold}yt-dlp${reset} for searching / downloading from YouTube !"
+		echo -e "https://github.com/yt-dlp/yt-dlp"
+		echo -e "${italic}brew install yt-dlp${reset}"
+		exit
+	fi
 
 	tmp_path=/tmp/soco-cli-gui
 	[ -d $tmp_path ] && rm -rf $tmp_path
@@ -1444,41 +1458,63 @@ search_tracks_from_youtube() {
 	tempfile=$(mktemp)
 	youtube_dl_log=$(mktemp)
 	
-	read -e -p "Search in YouTube: " search
+	read -e -p $'\e[1mSearch in YouTube: \e[1m' search
+	SANIT_SEARCH=$(echo $search | sed 's/ /%20/g')
 
-	#yt-dlp -j "ytsearch20:$search" | jq '{"Title": .fulltitle,"URL": .webpage_url,"Id": .id,"Thumbnail": .thumbnail,"Description": .description}'  > $tempfile
-	#yt-dlp -j "ytsearch20:$search" --match-filter "description !~= '\"'" | jq -r '{"Title": .fulltitle,"URL": .webpage_url,"Id": .id,"Thumbnail": .thumbnail,"Duration": .duration_string,"Description": .description}'  > $tempfile
-	
-	yt-dlp -j "ytsearch20:$search" | jq -r '{"Title": .fulltitle,"URL": .webpage_url,"Id": .id,"Thumbnail": .thumbnail,"Duration": .duration_string,"Description": .description}' | sed 's/\\\"/*/g' > $tempfile
-	# --match-filter "description !~= '\"'" 
-	# sed -E 's/\\([][])/\\\\\1/g'
-	
-	# "Title": "Arno \"Je serais devenu un gangster sans la scène\" #INA #short",
-	# "60 Seconds Inside THE CLASH \"Rock The Casbah\""
-
+	# sanitize thumb file name
 	img=$(_sanitize $search)
 	#cat $tempfile | jq
 	
-	echo
+	curl --silent "https://www.googleapis.com/youtube/v3/search?part=snippet&fields=items/snippet(title,description,thumbnails),items/id(videoId)&maxResults=$NORESULTS&q=$SANIT_SEARCH&type=video&key=$APIKEY" > $tempfile
+
+	result=$(cat $tempfile | sed 's/\\\"/*/g' | jq '.items[] | {"Id": .id.videoId,"Title": .snippet.title,"Description": .snippet.description,"Thumbnail": .snippet.thumbnails.medium.url}')
+
+	
+	#echo "$result" | jq
 
 	declare -a yt_urls=()
+	declare -a yt_titles=()
+	declare -a yt_durations=()
 	j=1
 
 	while read i; do
-		#echo "$i"
 		title=$(jq -r '.Title' <<< "$i")
-		url=$(jq -r '.URL' <<< "$i")
    		idx=$(jq -r '.Id' <<< "$i")
    		desc=$(jq -r '.Description' <<< "$i")
    		thumb=$(jq -r '.Thumbnail' <<< "$i")
-   		duration=$(jq -r '.Duration' <<< "$i")
-		[ ${#duration} -le 2 ] && duration="0:$duration"
+		#echo "$title"
+		#echo "$idx"
+		#echo "$desc"   		
+		#echo "$thumb"
+		url="$DOWNURL$idx"
+
+   		details=$(curl --silent "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&fields=items/contentDetails/duration,items/contentDetails/regionRestriction/blocked&key=$APIKEY&id=$idx" | jq -r '.items[]')
+
+		duration=$(echo "$details" | jq -r '.contentDetails.duration')
+   		#duration=$(curl --silent "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&fields=items/contentDetails/duration&key=$APIKEY&id=$idx" | jq -r '.items[] | .contentDetails.duration')
+		duration=${duration:2}
+		duration=${duration//[HMS]/:}
+		duration=${duration:0:-1}
+		#echo "$duration"
+		#[ ${#duration} -le 2 ] && duration="0:$duration"
+		
+		bloc=0
+		blocked=$(echo "$details" | jq -r '.contentDetails.regionRestriction.blocked')
+		#blocked=$(curl --silent "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&fields=items/contentDetails/regionRestriction/blocked&key=$APIKEY&id=$idx" | jq -r '.items[] | .contentDetails.regionRestriction.blocked')
+		
+		if [ "$blocked" != "null" ]; then
+			blocked=$(echo "$blocked" | jq -r '.[]')
+			# DE
+			# RU
+			[[ $blocked =~ FR ]] && bloc=1
+		fi
+		
    		echo -e "${bold}$j. $title${reset} ($duration)"
    		# "Title": "Arno \"Je serais devenu un gangster sans la scène\" #INA #short",
    		echo -e "${desc:0:200}" | fold -w 80 -s
    		#echo "$url"
- 		#echo "$thumb"
-  		#echo "$idx"
+ 		
+  		
    		yt_urls+=("$url")
    		yt_titles+=("$title")
    		yt_durations+=("$duration")
@@ -1494,34 +1530,34 @@ search_tracks_from_youtube() {
    		fi
    		echo
    		((j++))
-	done <<< $(jq -c '.' "$tempfile")
+	done <<< $(echo "$result" | jq -c '.')
 		
-	#echo "${yt_urls[@]}"
 	nb=${#yt_urls[@]}
 	
 	while :
 	do
-    	read -e -p "Enter video number to download or q to quit: " i
+    	read -e -p $'\e[1mEnter video number to download/listen or q to quit: \e[1m' i
+    	echo
 
     	[ "$i" == "q" ] && break
     	if ((i >= 1 && i <= $nb)); then
         	((i=i-1))
         	youtube_title=${yt_titles[$i]}
         	youtube_duration=${yt_durations[$i]}
-        	youtube_url=${yt_urls[$i]} && break
+        	youtube_url=${yt_urls[$i]}
+
+			if [ -n "$youtube_url" ]; then
+				yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames
+				filename=$(yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames --get-filename)
+
+				echo -e "\nPlaying ${bold}$youtube_title${reset} ($youtube_duration) (Ctrl-C to quit)\n"
+				sonos  $loc $device play_file "$filename"
+			fi
+
     	fi
 	done
-	
-	if [ -n "$youtube_url" ]; then
-		yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames
-		filename=$(yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames --get-filename)
-
-		echo -e "\nPlaying ${bold}$youtube_title${reset} ($youtube_duration) (Ctrl-C to quit)"
-		sonos  $loc $device play_file "$filename"
-	fi
 
 }
-
 
 # Search track in library -> add to queue -> play it
 search_tracks_from_library() {
