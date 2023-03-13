@@ -587,6 +587,7 @@ soco() {
 			14|u|U) mute_off;;
 			15) level_15;;
 			16|+) vol+;;
+			17|-) vol-;;
 			29|o|O) pause;;
 			30|p|P) prev;;
 			31|n|N) next;;
@@ -732,13 +733,13 @@ pause() {
 # Previous tracks
 # 	No applicable for sonos fav, radios Tune-in
 prev() {
-	backup=$playing
-
     sonos "$loc" "$device" previous 2>/dev/null
     if [ $? -gt 0 ]; then
     	msg="No applicable for the audio source !"
     else
-    	msg="Prev. track on $device..."	# <= Shazaaam
+    	on_air="$(shazam)"
+    	msg="Prev. track on $device: $on_air"
+    	playing="$on_air"
     fi
     echo -e "\n${bold} $msg ${reset}"
     sleep 2
@@ -747,13 +748,13 @@ prev() {
 # Next tracks
 # 	No applicable for sonos fav, radios Tune-in
 next() {
-	backup=$playing
-
     sonos "$loc" "$device" next 2>/dev/null
     if [ $? -gt 0 ]; then
     	msg="No applicable for the audio source !"
     else
-    	msg="Next. track on $device..."	# <= Shazaaam
+    	on_air="$(shazam)"
+    	msg="Next. track on $device: $on_air"
+    	playing="$on_air"
     fi
     echo -e "\n${bold} $msg ${reset}"
     sleep 2
@@ -1820,7 +1821,7 @@ shazaaaam() {
 # 507
 
 shazam() {
-	sz=$(sonos "$loc" "$device" -n 1.0 track)
+	sz=$(sonos -n 1.0 "$loc" "$device" track)
 	
 	# http://jazzradio.ice.infomaniak.ch/jazzradio-high.aac
 	# https://www.deezer.com/en/playlist/5390258182
