@@ -45,6 +45,10 @@ default="Salon"
 # YouTube downloaded folder
 dest_yt=$HOME/Music/YouTube
 
+# YouTube (api key and nb results)
+APIKEY="AIzaSyBtEqykacvWuWiLqq1-eIBZBrJzAYEx_xU"
+NORESULTS=5
+
 fzf_bin=0
 
 device=""
@@ -1420,12 +1424,7 @@ in_progress() {
 
 search_tracks_from_youtube() {
 
-	# https://github.com/mps-youtube/yewtube
-	# https://github.com/pystardust/ytfzf
-	
 	# https://stackoverflow.com/questions/49804874/download-the-best-quality-audio-file-with-youtube-dl
-	
-	#yt-dlp ytsearch5:"the clash" --get-id --get-title
 	
 	# yt-dlp -f 'ba' -ciw --extract-audio --audio-quality 0 --audio-format aac -o "%(title)s.%(ext)s" -v --downloader aria2c 'https://www.youtube.com/watch?v=l0Q8z1w0KGY'
 	# yt-dlp -f 251 'https://www.youtube.com/watch?v=l0Q8z1w0KGY'	(webm opus)
@@ -1436,13 +1435,9 @@ search_tracks_from_youtube() {
 	# dl
 	# yt-dlp -- bJ9r8LMU9bQ
 	# yt-dlp -o - "https://www.youtube.com/watch?v=bJ9r8LMU9bQ" | vlc -
-	# audio='yt-dIp -f 'ba' -x --audio-format mp3'
-	# -o '%(id)s.%(ext)s'
-	# ytfzf
 	
-	APIKEY="AIzaSyBtEqykacvWuWiLqq1-eIBZBrJzAYEx_xU"
-	APIURL="https://www.googleapis.com/youtube/v3/search"
-	NORESULTS=5
+	APISEARCH="https://www.googleapis.com/youtube/v3/search"
+	APIVIDEOS="https://www.googleapis.com/youtube/v3/videos"
 	DOWNURL="https://www.youtube.com/watch?v="
 
 	if (! type yt-dlp > /dev/null 2>&1); then 
@@ -1455,9 +1450,10 @@ search_tracks_from_youtube() {
 	tmp_path=/tmp/soco-cli-gui
 	[ -d $tmp_path ] && rm -rf $tmp_path
 	mkdir $tmp_path
-	tempfile=$(mktemp)
-	youtube_dl_log=$(mktemp)
 	
+	tempfoo=`basename $0`
+	tempfile=$(mktemp -t ${tempfoo}.XXXXXX) || exit 1	# /var/folders/q0/_xygfb815zx4tbgk812498tc0000gn/T/soco-cli-gui.sh.xwHCOq
+
 	read -e -p $'\e[1mSearch in YouTube: \e[1m' search
 	SANIT_SEARCH=$(echo $search | sed 's/ /%20/g')
 
@@ -1465,7 +1461,7 @@ search_tracks_from_youtube() {
 	img=$(_sanitize $search)
 	#cat $tempfile | jq
 	
-	curl --silent "https://www.googleapis.com/youtube/v3/search?part=snippet&fields=items/snippet(title,description,thumbnails),items/id(videoId)&maxResults=$NORESULTS&q=$SANIT_SEARCH&type=video&key=$APIKEY" > $tempfile
+	curl --silent "$APISEARCH?part=snippet&fields=items/snippet(title,description,thumbnails),items/id(videoId)&maxResults=$NORESULTS&q=$SANIT_SEARCH&type=video&key=$APIKEY" > $tempfile
 
 	result=$(cat $tempfile | sed 's/\\\"/*/g' | jq '.items[] | {"Id": .id.videoId,"Title": .snippet.title,"Description": .snippet.description,"Thumbnail": .snippet.thumbnails.medium.url}')
 
@@ -1488,7 +1484,7 @@ search_tracks_from_youtube() {
 		#echo "$thumb"
 		url="$DOWNURL$idx"
 
-   		details=$(curl --silent "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&fields=items/contentDetails/duration,items/contentDetails/regionRestriction/blocked&key=$APIKEY&id=$idx" | jq -r '.items[]')
+   		details=$(curl --silent "$APIVIDEOS?part=contentDetails&fields=items/contentDetails/duration,items/contentDetails/regionRestriction/blocked&key=$APIKEY&id=$idx" | jq -r '.items[]')
 
 		duration=$(echo "$details" | jq -r '.contentDetails.duration')
    		#duration=$(curl --silent "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&fields=items/contentDetails/duration&key=$APIKEY&id=$idx" | jq -r '.items[] | .contentDetails.duration')
