@@ -6,6 +6,14 @@
 # soco-cli installed in venv $HOME/Documents/venv/soco-cli/bin
 # and added to $PATH -> export PATH="$HOME/Documents/venv/soco-cli/bin:$PATH"
 
+# TODO
+#
+# Add queue position option for 'add_sharelink_to_queue'
+# - Add 'last' option to 'play_from_queue' action
+# - Add 'random' option to 'play_from_queue' action
+# - Add 'last_added' option to 'play_from_queue' action
+
+
 func=$1
 param=$2
 
@@ -721,6 +729,13 @@ stop() {
 	playing="Stop $device..."
     echo -e "\n${bold} Stop $device... ${reset}"
     sonos "$loc" "$device" stop && sleep 2
+	}
+
+# Stop all device
+stop_all() {
+	playing="Stop all devices..."
+    echo -e "\n${bold} Stop all devices... ${reset}"
+    sonos "$loc" "$device" stop_all && sleep 2
 	}
 
 # Pause $device
@@ -2241,7 +2256,7 @@ soco_alarms() {
 		#echo -e "    Sonos $device alarms Menu      "
 		printf "%*s\n" $pad "$_alarm"
 		echo -e "--------------------------------------------"
-		echo -e " 1) ${bgd}A${reset}larms                               " " | " 
+		echo -e " 1) A${bgd}l${reset}arms                               " " | " 
 		echo -e " 2) ${bgd}C${reset}reate alarms                        " " | "
 		echo -e " 3) ${bgd}R${reset}emove alarms                        " " | "
 		echo -e " 4) ${bgd}M${reset}odify alarms                        " " | "
@@ -2249,15 +2264,16 @@ soco_alarms() {
 		echo -e " 6) Mo${bgd}v${reset}e alarm                           " " | "
 		echo -e " 7) Snoo${bgd}z${reset}e alarm                         " " | "
 		echo -e " 8) Cop${bgd}y${reset} alarm                           " " | "
-		echo -e " 9)                                      " " | "
-		echo -e " 10) ${bgd}H${reset}ome                                " " | "
+		echo -e " 9) ${bgd}S${reset}top alarm                           " " | "
+		echo -e " 10) Stop ${bgd}a${reset}ll alarm                      " " | "
+		echo -e " 11) ${bgd}H${reset}ome                                " " | "
 		echo -e "============================================"
 		echo -e "Enter your menu choice [1-10]: \c "
 		read infos
 	
 		case "$infos" in
 
-			1|a|A) alarms;;
+			1|l|L) alarms;;
 			2|c|C) create_alarms;;
 			3|r|R) remove_alarms;;
 			4|m|M) modify_alarms;;
@@ -2265,7 +2281,9 @@ soco_alarms() {
 			6|v|V) move_alarms;;
 			7|z|Z) snooze_alarms;;
 			8|y|Y) copy_alarms;;
-			10|h|H) exec "$0";;
+			9|s|S) stop;;
+			10|a|A) stop_all;;
+			11|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
 		esac
@@ -2611,7 +2629,7 @@ modify_alarms() {
 				
 				IFS=, read -a ids <<< "${to_modify}"
 				
-				speaker="${ids[0]}"
+				#speaker="${ids[0]}"
 				start_time="${ids[1]}"
 				duration="${ids[2]}"
 				recurrence="${ids[3]}"
@@ -2867,7 +2885,7 @@ all() {
 		echo -e " 2) ${bgd}S${reset}witch Status Light ON             " " | "
 		echo -e " 3) ${bgd}M${reset}ute ON                            " " | "
 		echo -e " 4) M${bgd}u${reset}te OFF                           " " | "
-		echo -e " 5)                                    " " | "
+		echo -e " 5) ${bgd}S${reset}top all device                    " " | "
 		echo -e " 6)                                    " " | "
 		echo -e " 7)                                    " " | "
 		echo -e " 8)                                    " " | "
@@ -2883,6 +2901,7 @@ all() {
 			2|s|S) all_status_light_on;;
 			3|m|M) all_mute_on;;
 			4|u|U) all_mute_off;;
+			5|a|A) stop_all;;
 			10|r|R) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read ;;
