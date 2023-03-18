@@ -55,7 +55,7 @@ dest_yt=$HOME/Music/YouTube
 
 # YouTube (api key and nb results)
 APIKEY="AIzaSyBtEqykacvWuWiLqq1-eIBZBrJzAYEx_xU"
-NORESULTS=5
+NORESULTS=20
 
 fzf_bin=0
 
@@ -234,8 +234,9 @@ art() {
 
 # Tracks list from album
 _tia() {
-	tia=$(sonos "$loc" "$device" tracks_in_album "$1" | tail -n+4 )
-
+	# suppress all after the first blank line
+	tia=$(sonos "$loc" "$device" tracks_in_album "$1" | tail -n+4 | awk '/^$/{exit} 1')
+	
 	artiste=$(echo "$tia" | head -1 | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | xargs -0)
 	album=$(echo "$tia" | head -1 | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | xargs -0)
 	
@@ -1110,7 +1111,7 @@ play_local_audio_dir() {
 				((i++))
 			done <<< "$liste"
 			echo
-			sonos "$loc" "$device" play_directory "$dir"
+			sonos "$loc" "$device" play_directory "$audio_dir"
 		fi		
 	fi
 
@@ -1306,7 +1307,8 @@ search_artist_from_library() {
 			
 					[ "$research" == "q" ] && break
 					if [ "$research" != "q" ] && [ -n "$research" ]; then
-						art=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
+						#art=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
+						art=$(echo "$x" | grep -E "^[[:blank:]]+\"$research:\"")
 	
 						[ -n "$art" ] && break 2
 					fi	
@@ -1343,7 +1345,8 @@ search_artist_from_library() {
 					read -e -p "Choose index of album or (q) to quit: " research
 			
 					if [ "$research" != "q" ]; then
-						l_alb=$(echo "$l_alb" | grep -E ^[[:blank:]]+"$research:")
+						#l_alb=$(echo "$l_alb" | grep -E ^[[:blank:]]+"$research:")
+						l_alb=$(echo "$l_alb" | grep -E "^[[:blank:]]+\"$research:\"")
 	
 						[ -n "$l_alb" ] && break
 					else break
@@ -1403,7 +1406,8 @@ search_album_from_library() {
 					read -e -p "Choose index of album or (q) to re-search: " research
 			
 					if [ "$research" != "q" ] && [ -n "$research" ]; then
-						alb=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
+						#alb=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
+						alb=$(echo "$x" | grep -E "^[[:blank:]]+\"$research:\"")
 	
 						[ -n "$alb" ] && break 2
 					else break
@@ -1425,7 +1429,8 @@ search_album_from_library() {
 	
 		#list_queue
 	
-		w=$(sonos $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
+		#w=$(sonos $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
+		sonos $loc $device queue_album "$album" first : $device play_from_queue > /dev/null # ajoute en pos 1  et joue
 		_tia "$album"
 	fi
 
@@ -1519,11 +1524,13 @@ search_tracks_from_youtube() {
 		blocked=$(echo "$details" | jq -r '.contentDetails.regionRestriction.blocked')
 		#blocked=$(curl --silent "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&fields=items/contentDetails/regionRestriction/blocked&key=$APIKEY&id=$idx" | jq -r '.items[] | .contentDetails.regionRestriction.blocked')
 		
+		# If bocked in France => bloc=1
 		if [ "$blocked" != "null" ]; then
 			blocked=$(echo "$blocked" | jq -r '.[]')
 			# DE
 			# RU
 			[[ $blocked =~ FR ]] && bloc=1
+			# ^--^ SC2034 (warning): bloc appears unused. Verify use (or export if used externally).
 		fi
 		
    		echo -e "${bold}$j. $title${reset} ($duration)"
@@ -1547,7 +1554,7 @@ search_tracks_from_youtube() {
    		fi
    		echo
    		((j++))
-	done <<< $(echo "$result" | jq -c '.')
+	done <<< "$(echo "$result" | jq -c '.')"
 		
 	nb=${#yt_urls[@]}
 	
@@ -1564,11 +1571,13 @@ search_tracks_from_youtube() {
         	youtube_url=${yt_urls[$i]}
 
 			if [ -n "$youtube_url" ]; then
+			
 				yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames
 				filename=$(yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames --get-filename)
 
 				echo -e "\nPlaying ${bold}$youtube_title${reset} ($youtube_duration) (Ctrl-C to quit)\n"
 				sonos  $loc $device play_file "$filename"
+				
 			fi
 
     	fi
@@ -1613,7 +1622,8 @@ search_tracks_from_library() {
 						read -e -p "Choose index of track or (q) to re-search: " research
 			
 						if [ "$research" != "q" ] && [ -n "$research" ]; then
-							trk=$(echo "$tracks" | grep -E ^[[:blank:]]+"$research:")
+							#trk=$(echo "$tracks" | grep -E ^[[:blank:]]+"$research:")
+							trk=$(echo "$tracks" | grep -E "^[[:blank:]]+\"$research:\"")
 							[ -n "$trk" ] && break 2 || echo "Wrong Choice !"
 							
 						else break
@@ -1648,10 +1658,10 @@ play_uri() {
     echo -e "\n${bold} Play radio stream... ${reset}\n"
 
  	if [ $fzf_bin -eq 1 ]; then
- 		header=" ESC to quit !"
+ 		header=" ESC to quit ! (enter stream manually)"
  		prompt="Choose a radio: "
  		
- 		unset radio_uri[*CHIME*]
+ 		unset "radio_uri[*CHIME*]"
    		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt" --header "$header")
 		[ -n "$choice" ] && uri_fzf=${radio_uri[${choice:5}]}
 		url="$uri_fzf"
@@ -1661,38 +1671,42 @@ play_uri() {
 		while :
 		do    
 	
-    		read -e -p "Enter radio stream URL [.mp3|.aac|.m3u|.pls]: " -i "http://" url
+    		read -e -p "Enter radio stream URL [.mp3|.aac|.m3u|.pls] or Q to quit !: " -i "http://" enter
    			#url="http://jazzradio.ice.infomaniak.ch/jazzradio-high.aac"
-    
+    		[[ "$enter" =~ ^[qQ] ]] && break
+    		
 	    	read -p "Enter radio stream name: " title
 
 			REGEX="CHIME|^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
-			if [[ "$url" =~ $REGEX ]]; then break
+			if [[ "$enter" =~ $REGEX ]]; then 
+				url="$enter"
+				break
     		else echo -e "\nWrong radio stream URL !"
     		fi
    		done
 	fi
 	
-	# Get title from url in radio_uri array
-	for k in "${!radio_uri[@]}"; do
-   		[[ ${radio_uri[$k]} == $url ]] && title="$k"
-	done
+	if [ -n "$url" ]; then
+		# Get title from url in radio_uri array
+		for k in "${!radio_uri[@]}"; do
+   			[[ ${radio_uri[$k]} == "$url" ]] && title="$k"
+		done
 
-	# get url status ans radio's name
-	_curl_url ${url}
+		# get url status ans radio's name
+		_curl_url ${url}
 	
-	# valid radio stream
-	if [ $status_uri -eq 200 ]; then
-		_display_cover_art $url
-    	if [ -n "$title" ]; then playing="Playing ${title} radio stream..."
-    	elif [ -n "$icy_name" ]; then playing="Playing ${icy_name} radio stream..."
-    	else playing="Playing $url radio stream..."
-    	fi
-		echo -e "\n${bold} $playing ${reset}"
-    	sonos "$loc" "$device" play_uri $url "$title"
-	fi
-    
-	sleep 2
+		# valid radio stream
+		if [ $status_uri -eq 200 ]; then
+			_display_cover_art $url
+  		  	if [ -n "$title" ]; then playing="Playing ${title} radio stream..."
+   		 	elif [ -n "$icy_name" ]; then playing="Playing ${icy_name} radio stream..."
+   		 	else playing="Playing $url radio stream..."
+    		fi
+			echo -e "\n${bold} $playing ${reset}"
+   		 	sonos "$loc" "$device" play_uri $url "$title"
+		fi
+    fi
+	sleep 0.5
 	}
 
 # Sleep timer
@@ -2013,7 +2027,8 @@ favourite_radio_stations() {
 			[ "$choose" == "q" ] && break;
 			if [ "$choose" != "q" ] && [ -n "$choose" ]; then
 				if _is_int "$choose"; then
-					rad=$(echo "$r" | grep -E ^[[:blank:]]+"$choose:")
+					#rad=$(echo "$r" | grep -E ^[[:blank:]]+"$choose:")
+					rad=$(echo "$r" | grep -E "^[[:blank:]]+\"$choose:\"")
 					[ -n "$rad" ] && break 
 				fi	
 			fi	
@@ -2061,7 +2076,8 @@ list_favs() {
 			[ "$choose" == "q" ] && break;
 			if [ "$choose" != "q" ] && [ -n "$choose" ]; then
 				if _is_int "$choose"; then
-					fav=$(echo "$f" | grep -E ^[[:blank:]]+"$choose:")
+					#fav=$(echo "$f" | grep -E ^[[:blank:]]+"$choose:")
+					fav=$(echo "$f" | grep -E "^[[:blank:]]+\"$choose:\"")
 					[ -n "$fav" ] && break 
 				fi	
 			fi	
@@ -2087,9 +2103,7 @@ list_favs() {
 list_queue() {
     echo -e "\n${bold} Queue... ${reset}"
     q=$(sonos "$loc" "$device" list_queue)
-    #q=$(echo "$q" | head -n75)
-    #echo -e "\n $q \n"
- fzf_bin=0
+
     if [ $fzf_bin -eq 1 ]; then
  		
 		fzf_queue_args=(
@@ -2103,10 +2117,8 @@ list_queue() {
 		t=$(echo "$q" | awk NF | fzf "${fzf_queue_args[@]}")
    
    	else
-    #q=$(echo "$q" | more)
     	echo -e "\nList of tracks in queue: (using <more>)"
-    	echo -e "$q \n" | more
-    #read -p "< Press Enter>"
+    	echo -e "$q \n" | more -d
     fi
 	}
 
@@ -2171,11 +2183,6 @@ clear_queue() {
 play_queue() {
     echo -e "\n${bold} Play queue... ${reset}"
     q=$(sonos "$loc" "$device" list_queue)
-    #q=$(cat queue.txt | tail -n +2 )
-
-    #q_length=$(sonos "$loc" "$device" queue_length)
-    
-    fzf_bin=0
     
     if [ -n "$q" ]; then
     	
@@ -2183,18 +2190,19 @@ play_queue() {
     	
     		q=$(echo -e "last_added: last_added\n    random: random\n      last: last\n   current: current\n$q")
  			
- 			fzf_music_folder_args=(
+ 			fzf_queue_args=(
     			--border
 	    		--exact
+	    		--height 60%
 				--header="ENTER for select track; ESC for a new search"
 				--prompt="Choose index of queue file: "
 				)
-			queue=$(echo "$q" | fzf "${fzf_music_folder_args[@]}")
+			queue=$(echo "$q" | awk NF | fzf "${fzf_queue_args[@]}")
 			pos_queue=$(echo "$queue" | awk -F":" '{print $1}')
 
 		else
-    		#q=$(echo "$q" | head -n75)
-    		echo -e "\n $q \n"
+			echo -e "\nList of tracks in queue: (using <more>)"
+    		echo -e "\n $q \n" | more -d
 		
 			while :
 			do    
@@ -2211,7 +2219,8 @@ play_queue() {
 					[ "$research" == "l" ] && pos_queue="last" && break
 					[ "$research" == "r" ] && pos_queue="random" && break
 					if [ "$research" != "q" ] && [ -n "$research" ]; then
-						queue=$(echo "$q" | grep -E ^[[:blank:]]+"$research:")
+						#queue=$(echo "$q" | grep -E ^[[:blank:]]+"$research:")
+						queue=$(echo "$q" | grep -E "^[[:blank:]]+\"$research:\"")
 						pos_queue=$(echo "$queue" | awk -F":" '{print $1}')
 						[ -n "$queue" ] && break
 					else break
@@ -2220,14 +2229,23 @@ play_queue() {
 
 		fi
 		
-		echo "$queue"
-		echo "$pos_queue"
+		if [ -n "$queue" ] && [ -n "$pos_queue" ]; then
+			artist=$(echo "$queue" | awk -F ": " '{print $3}' | awk -F "|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+			album=$(echo "$queue" | awk -F ": " '{print $4}' | awk -F "|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+			title=$(echo "$queue" | awk -F ": " '{print $5}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
 		
-    	# sonos "$loc" "$device" play_from_queue "$pos_queue"
+			echo -e "\nPlaying ${bold}$title${reset} from album ${bold}$album${reset} of ${bold}$artist${reset}..."
+
+		
+    		sonos "$loc" "$device" play_from_queue "$pos_queue"
+    		art
+    	fi
+    	
     else
     	echo "Queue is empty !"
     fi
-    read -p "< Press Enter>"
+    
+    sleep 0.5
 	}
 
 # List Artists
@@ -2525,8 +2543,8 @@ remove_alarms() {
 			h=$(echo "$trk" | sed 's/,/ /g')
 			for i in ${h}
 			do
-				[[ $ala_id =~ "$i" ]] && j+="$i,"
-				[[ ! $ala_id =~ "$i" ]] && k+="$i,"
+				[[ $ala_id =~ $i ]] && j+="$i,"
+				[[ ! $ala_id =~ $i ]] && k+="$i,"
 			done
 			j=$(echo "$j" | sed 's/,$//')
 			k=$(echo "$k" | sed 's/,$//')
@@ -2616,10 +2634,11 @@ move_alarms() {
 			
 				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
 				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
-				other="${other_speakers[@]}"
+				#other="${other_speakers[@]}"
+				other="${other_speakers[*]}"
 				
 				read -e -p "Move Alarm ID <$trk> to Speaker <$other> (enter target name): " -i ${other_speakers[0]} target
-				if [[ $other_speakers =~ "$target" ]]; then
+				if [[ $other_speakers =~ $target ]]; then
 					sonos $loc $target move_alarm $trk
 					[ $? != 0 ] && echo -e "${red}Error !${reset}"
 					break
@@ -2652,7 +2671,8 @@ copy_alarms() {
 			
 				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
 				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
-				other="${other_speakers[@]}"
+				#other="${other_speakers[@]}"
+				other="${other_speakers[*]}"
 
     			if [ $fzf_bin -eq 1 ]; then
  					header=" Choose a target speaker for this alarm"
@@ -2665,7 +2685,7 @@ copy_alarms() {
 				[ -z "$other_speaker_fzf" ] && other_speaker_fzf="$other"
 				
 				read -e -p "Copy Alarm ID <$trk> to Speaker <$other> (enter target name): " -i "$other_speaker_fzf" target
-				if [[ $other_speakers =~ "$target" ]]; then
+				if [[ $other_speakers =~ $target ]]; then
 					sonos $loc $target copy_alarm $trk
 					[ $? != 0 ] && echo -e "${red}Error !${reset}"
 					break
