@@ -8,7 +8,7 @@
 
 # TODO
 #
-# Add queue position option for 'add_sharelink_to_queue'
+# Add queue position option for 'add_sharelink_to_queue' or 'sharelink' 1120 play_shared_link()
 # - Add 'last' option to 'play_from_queue' action
 # - Add 'random' option to 'play_from_queue' action
 # - Add 'last_added' option to 'play_from_queue' action
@@ -130,6 +130,10 @@ _sanitize() {
    s="${s/#-}"                  # remove - from start
    s="${s/%-}"                  # remove - from end
    echo "${s,,}"                # convert to lowercase
+}
+
+_trim () {
+    read -rd '' $1 <<<"${!1}"
 }
 
 # Get url status ans radio's name from uri stream
@@ -462,7 +466,7 @@ help() {
 	echo
 	echo -e "\n${bold}Sonos <$device> lists Menu:${reset}"
 	echo -e " ${greenbold}1) Favourite radio stations:${reset} lists the favourite radio stations"
-	echo -e " ${greenbold}2) Favourites:${reset} lists all Sonos favourites"	echo
+	echo -e " ${greenbold}2) Favourites:${reset} lists all Sonos favourites"
 	echo
 	echo -e " ${greenbold}3) Queue:${reset} list the tracks in the queue"
 	echo -e " ${greenbold}4) Remove from queue:${reset} remove tracks from the queue. Track numbers start from 1. (single integers, sequences ('4,7,3'), ranges ('5-10')"
@@ -893,7 +897,7 @@ play_local_m3u() {
 				echo -e "\n${underline}$m3u:${reset}"
 				pls=$(cat "$pl_file")
 				echo -e "\n$pls\n"
-				#sonos "$loc" "$device" play_m3u "$fp" pi
+				sonos "$loc" "$device" play_m3u "$fp" pi
 			else
 				echo -e "File ${bold}$m3u${reset} doesn't exist!"
 	fi
@@ -1271,20 +1275,19 @@ make_playlist() {
 search_artist_from_library() {
 	
 	echo
-	fzf_bin=0
+	#fzf_bin=0
 	if [ $fzf_bin -eq 1 ]; then
  		
 		fzf_music_folder_args=(
     		--border
     		--exact
+    		--header="ENTER for select artist; ESC to quit"
+    		--prompt="Search artist in library > "
 			)
 		
 		art=$(sonos "$loc" "$device" list_artists | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
-	fi
 	
-	echo "$art"
-	
-	if [ -z "$art" ]; then
+	elif [ -z "$art" ]; then
 		art=$(sonos "$loc" "$device" list_artists | tail -n+4)
 		
 		while :
@@ -1301,65 +1304,66 @@ search_artist_from_library() {
 				do    
 					read -e -p "Choose index of artist or q to re-search: " research
 			
+					[ "$research" == "q" ] && break
 					if [ "$research" != "q" ] && [ -n "$research" ]; then
 						art=$(echo "$x" | grep -E ^[[:blank:]]+"$research:")
 	
 						[ -n "$art" ] && break 2
-					else break
 					fi	
 				done
 			fi	
 		done
 	fi
 
+	if [ -n "$art" ]; then
+	
+		artiste=$(echo "$art" | awk -F":" '{print $2}' | xargs -0)
 
-	artiste=$(echo "$art" | awk -F":" '{print $2}' | xargs -0)
-	#index=$(echo "$art" | awk -F":" '{print $1}' | xargs)
-
-	if [ $fzf_bin -eq 1 ]; then
+		if [ $fzf_bin -eq 1 ]; then
  		
-		fzf_music_folder_args=(
-    		--border
-    		--exact
-			)
+			fzf_music_folder_args=(
+	    		--border
+    			--exact
+    			--header="ENTER for select album; ESC for a new search"
+    			--prompt="Search album from $artiste in library > "
+				)
 		
-		l_alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | grep -i "$artiste" | fzf "${fzf_music_folder_args[@]}")
-	fi
+			l_alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | grep -i "$artiste" | fzf "${fzf_music_folder_args[@]}")
+			echo "$l_alb" #     788: Album: The Suburbs | Artist: Arcade Fire
+		#fi
 
-	if [ -z "$l_alb" ]; then
-		l_alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | grep -i "$artiste")
+		elif [ -z "$l_alb" ]; then
+			l_alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | grep -i "$artiste")
 
-		echo -e "\n${underline}Albums from $artiste:${reset}"
-		echo -e "$l_alb\n"
-		if [ -n "$l_alb" ]; then
-			while :
-			do    	
-				read -e -p "Choose index of album or (q) to quit: " research
+			echo -e "\n${underline}Albums from $artiste:${reset}"
+			echo -e "$l_alb\n"
+			if [ -n "$l_alb" ]; then
+				while :
+				do    	
+					read -e -p "Choose index of album or (q) to quit: " research
 			
-				if [ "$research" != "q" ]; then
-					alb=$(echo "$l_alb" | grep -E ^[[:blank:]]+"$research:")
+					if [ "$research" != "q" ]; then
+						l_alb=$(echo "$l_alb" | grep -E ^[[:blank:]]+"$research:")
 	
-					[ -n "$alb" ] && break
-				else break
-				fi	
-			done
-		else echo -e "No albums from ${bold}$artiste${reset} found !"
-		fi	
-	else
-		alb="$l_alb"
-	fi
+						[ -n "$l_alb" ] && break
+					else break
+					fi	
+				done
+			else echo -e "No albums from ${bold}$artiste${reset} found !"
+			fi	
+		fi
 	
-	if [ -n "$alb" ]; then
-		artiste=$(echo "$alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
-		album=$(echo "$alb" | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//') # xargs: unterminated quote
-		#index=$(echo "$alb" | awk -F":" '{print $1}' | xargs)
-		
-		echo -e "\nAdding ${bold}$album${reset} from ${bold}$artiste${reset} to queue and playing..."
+		if [ -n "$l_alb" ]; then
+			artiste=$(echo "$l_alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
+			album=$(echo "$l_alb" | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//') # xargs: unterminated quote
+			#index=$(echo "$alb" | awk -F":" '{print $1}' | xargs)
+
+			echo -e "\nAdding ${bold}$album${reset} from ${bold}$artiste${reset} to queue and playing..."
 	
-		#list_queue
+			w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
+			_tia "$album"
+		fi
 	
-		w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
-		_tia "$album"
 	fi
 }
 
@@ -1410,6 +1414,7 @@ search_album_from_library() {
 		done
 	fi
 
+	#sonos "$loc" "$device" queue_search_result_number $track first : $device play_from_queue > /dev/null
 	
 	if [ -n "$alb" ]; then
 		artiste=$(echo "$alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
@@ -1420,7 +1425,7 @@ search_album_from_library() {
 	
 		#list_queue
 	
-		w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
+		w=$(sonos $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
 		_tia "$album"
 	fi
 
@@ -1571,6 +1576,8 @@ search_tracks_from_youtube() {
 
 }
 
+
+
 # Search track in library -> add to queue -> play it
 search_tracks_from_library() {
 
@@ -1586,7 +1593,7 @@ search_tracks_from_library() {
 			nb=$(echo -n "$tracks" | grep -c '^')
 		
 			if [ "$nb" -gt 0 ]; then
-	
+
 				if [ $fzf_bin -eq 1 ]; then
  		
 					fzf_music_folder_args=(
@@ -1945,7 +1952,7 @@ soco_lists() {
 		echo -e " 3) ${bgd}Q${reset}ueue                    " " | " " 13) D${bgd}e${reset}lete playlists                    " " | "
 		echo -e " 4) Re${bgd}m${reset}ove from queue        " " | " " 14) ${bgd}L${reset}ists tracks in all Sonos Playlists " " | "
 		echo -e " 5) ${bgd}C${reset}lear queue              " " | " " 15) Ad${bgd}d${reset} a Sonos playlist to queue       " " | "
-		echo -e " 6)                          " " | " " 16) Remove a trac${bgd}k${reset} from a Sonos playlist" " | "
+		echo -e " 6) Pla${bgd}y${reset} from queue          " " | " " 16) Remove a trac${bgd}k${reset} from a Sonos playlist" " | "
 		echo -e " 7) List ${bgd}a${reset}rtists             " " | " " 17)                                     " " | "
 		echo -e " 8) List al${bgd}b${reset}ums              " " | " " 18)                                     " " | "
 		echo -e " 9)                          " " | " " 19)                                     " " | " 
@@ -1961,6 +1968,7 @@ soco_lists() {
 			3|q|Q) list_queue;;
 			4|m|M) remove_from_queue;;
 			5|c|C) clear_queue;;
+			6|y|Y) play_queue;;
 			7|a|A) list_artists;;
 			8|b|B) list_albums;;
 			11|p|P) create_playlist;;
@@ -1977,49 +1985,177 @@ soco_lists() {
 	}
 
 
-# Favourite radio stations
+# List and play Favourite radio stations (Tune-In)
 favourite_radio_stations() {
-    echo -e "\n${bold} Favourite radio stations... ${reset}"
-    s=$(sonos "$loc" "$device" favourite_radio_stations)
-    echo -e "\n $s \n"
-    read -p "< Press Enter>"
+    echo -e "\n${bold} Favourite radio stations (Tune-In)... ${reset}"
+   
+   	if [ $fzf_bin -eq 1 ]; then
+ 		
+		fzf_music_folder_args=(
+    		--border
+    		--exact
+    		--header="ENTER for select radio; ESC to quit"
+    		--prompt="Choose a radio: "
+			)
+		
+		rad=$(sonos "$loc" "$device" favourite_radio_stations | awk NF | fzf "${fzf_music_folder_args[@]}")
+	
+	else
+	
+		r=$(sonos "$loc" "$device" favourite_radio_stations | awk NF)
+		
+		echo -e "$r\n"
+		
+		while :
+		do    	
+			read -e -p "Choose a radio station or (q) to quit: " choose
+			
+			[ "$choose" == "q" ] && break;
+			if [ "$choose" != "q" ] && [ -n "$choose" ]; then
+				if _is_int "$choose"; then
+					rad=$(echo "$r" | grep -E ^[[:blank:]]+"$choose:")
+					[ -n "$rad" ] && break 
+				fi	
+			fi	
+		done
+	fi
+
+	if [ -n "$rad" ]; then
+		no_radio=$(awk -F":" '{print $1}' <<< "$rad")
+		_trim no_radio
+		radio=$(awk -F":" '{print $2}' <<< "$rad")
+		_trim radio
+		
+		echo -e "\nPlaying ${bold}$radio${reset} ..."
+   		sonos "$loc" "$device" play_fav_radio_station_no "$no_radio"
+	fi
+
+    sleep 0.5
 	}
 
-# Favourites
+# List and play Sonos Favourites
 list_favs() {
-    echo -e "\n${bold} Favourites... ${reset}"
-    f=$(sonos "$loc" "$device" list_favs)
-    echo -e "\n $f \n"
-    read -p "< Press Enter>"
+    echo -e "\n${bold} Sonos Favourites... ${reset}"
+    #fzf_bin=0
+   	if [ $fzf_bin -eq 1 ]; then
+ 		
+		fzf_music_folder_args=(
+    		--border
+    		--exact
+    		--header="ENTER for select favourite; ESC to quit"
+    		--prompt="Choose a Sonos favourite: "
+			)
+		
+		fav=$(sonos "$loc" "$device" list_favs | awk NF | fzf "${fzf_music_folder_args[@]}")
+	
+	else
+	
+		f=$(sonos "$loc" "$device" list_favs | awk NF)
+		
+		echo -e "$f\n"
+		
+		while :
+		do    	
+			read -e -p "Choose a Sonos favourite or (q) to quit: " choose
+			
+			[ "$choose" == "q" ] && break;
+			if [ "$choose" != "q" ] && [ -n "$choose" ]; then
+				if _is_int "$choose"; then
+					fav=$(echo "$f" | grep -E ^[[:blank:]]+"$choose:")
+					[ -n "$fav" ] && break 
+				fi	
+			fi	
+		done
+	fi
+
+	if [ -n "$fav" ]; then
+		no_favourite=$(awk -F":" '{print $1}' <<< "$fav")
+		_trim no_favourite
+		favourite=$(awk -F":" '{print $2}' <<< "$fav")
+		_trim favourite
+		
+		echo -e "\nPlaying ${bold}$favourite${reset} ..."
+   		sonos "$loc" "$device" play_favourite_number "$no_favourite" 2>/dev/null
+   		
+   		if [ $? -gt 0 ]; then echo -e "Podcast are not supported !"; fi
+	fi
+
+    sleep 0.5
 	}
 
 # Queue
 list_queue() {
     echo -e "\n${bold} Queue... ${reset}"
     q=$(sonos "$loc" "$device" list_queue)
-    q=$(echo "$q" | head -n75)
-    echo -e "\n $q \n"
-    read -p "< Press Enter>"
+    #q=$(echo "$q" | head -n75)
+    #echo -e "\n $q \n"
+ fzf_bin=0
+    if [ $fzf_bin -eq 1 ]; then
+ 		
+		fzf_queue_args=(
+    		--border
+    		--exact
+    		--height 60%
+    		--header="ENTER or ESC to quit"
+    		--prompt="List of tracks in queue: "
+			)
+		
+		t=$(echo "$q" | awk NF | fzf "${fzf_queue_args[@]}")
+   
+   	else
+    #q=$(echo "$q" | more)
+    	echo -e "\nList of tracks in queue: (using <more>)"
+    	echo -e "$q \n" | more
+    #read -p "< Press Enter>"
+    fi
 	}
 
 # Remove from queue
 remove_from_queue() {
     echo -e "\n${bold} Remove from queue... ${reset}"
-
-	l=$(sonos "$loc" "$device" queue_length)
-	if [ $l -ne 0 ]; then
-    	while :
-		do
-			sonos "$loc" "$device" list_queue
+	
+	tracks=
+   	if [ $fzf_bin -eq 1 ]; then
+ 		
+		fzf_queue_args=(
+    		--border
+    		--exact
+    		--multi
+    		--height 60%
+    		--header="TAB for select track; ENTER to remove; ESC to quit"
+    		--prompt="Select tracks to remove: "
+			)
 		
-	    	read -p "Enter track to remove [3][4,7,3][5-10][1,3-6,10] or [q] to quit: " track
-    		if [[ "$track" == "q" || "$track" == "Q" ]]; then break; fi
-			sonos "$loc" "$device" remove_from_queue $track		
-		done
+		t=$(sonos "$loc" "$device" list_queue | awk NF | fzf "${fzf_queue_args[@]}")
+		tracks=$(echo "$t" | awk -F":" '{print $1}' | awk '{$1=$1;print}' | sort -n | tr '\n' ',' | sed 's/.$//')
+				
 	else
-		echo -e "\n${red}Queue is empty !${reset}"
-	fi	
-	sleep 2  
+
+		l=$(sonos "$loc" "$device" queue_length)
+		if [ $l -ne 0 ]; then
+    		while :
+			do
+				sonos "$loc" "$device" list_queue
+		
+		    	read -p "Enter tracks to remove [3][4,7,3][5-10][1,3-6,10] or [q] to quit: " enter
+    			[[ "$enter" =~ ^[qQ] ]] && break
+    			if [[ "$enter" =~ ^[[:digit:]]+([,-][[:digit:]]+)*$ ]]; then
+    				tracks="$enter"
+    				#[ -n "$tracks" ] && break
+    				break
+    			fi
+			done
+		else
+			echo -e "\n${red}Queue is empty !${reset}"
+		fi	
+	fi
+	
+	if [ -n "$tracks" ]; then
+		echo -e "Removing tracks $tracks..."
+		sonos "$loc" "$device" remove_from_queue $tracks
+	fi
+	
+	sleep 0.5  
 	}
 
 # Clear queue
@@ -2029,6 +2165,69 @@ clear_queue() {
     q=$(sonos "$loc" "$device" queue_length)
     if [ $q -eq 0 ]; then echo "Queue is empty"; else echo "Queue is not empty"; fi
     sleep 1.5
+	}
+
+# Play queue
+play_queue() {
+    echo -e "\n${bold} Play queue... ${reset}"
+    q=$(sonos "$loc" "$device" list_queue)
+    #q=$(cat queue.txt | tail -n +2 )
+
+    #q_length=$(sonos "$loc" "$device" queue_length)
+    
+    fzf_bin=0
+    
+    if [ -n "$q" ]; then
+    	
+    	if [ $fzf_bin -eq 1 ]; then
+    	
+    		q=$(echo -e "last_added: last_added\n    random: random\n      last: last\n   current: current\n$q")
+ 			
+ 			fzf_music_folder_args=(
+    			--border
+	    		--exact
+				--header="ENTER for select track; ESC for a new search"
+				--prompt="Choose index of queue file: "
+				)
+			queue=$(echo "$q" | fzf "${fzf_music_folder_args[@]}")
+			pos_queue=$(echo "$queue" | awk -F":" '{print $1}')
+
+		else
+    		#q=$(echo "$q" | head -n75)
+    		echo -e "\n $q \n"
+		
+			while :
+			do    
+					echo -e "Choose index of queue file or"
+					echo -e " - (a) to last added: "
+					echo -e " - (c) to play current: "
+					echo -e " - (l) to play last: "
+					echo -e " - (r) to play random: "
+					echo -e " - (q) to quit: "
+					read -e -p "> " research
+			
+					[ "$research" == "a" ] && pos_queue="last_added" && break
+					[ "$research" == "c" ] && pos_queue="current" && break
+					[ "$research" == "l" ] && pos_queue="last" && break
+					[ "$research" == "r" ] && pos_queue="random" && break
+					if [ "$research" != "q" ] && [ -n "$research" ]; then
+						queue=$(echo "$q" | grep -E ^[[:blank:]]+"$research:")
+						pos_queue=$(echo "$queue" | awk -F":" '{print $1}')
+						[ -n "$queue" ] && break
+					else break
+					fi	
+			done
+
+		fi
+		
+		echo "$queue"
+		echo "$pos_queue"
+		
+    	# sonos "$loc" "$device" play_from_queue "$pos_queue"
+    else
+    	echo "Queue is empty !"
+    fi
+    read -p "< Press Enter>"
 	}
 
 # List Artists
@@ -2055,7 +2254,7 @@ create_playlist() {
    	sonos "$loc" "$device" create_playlist "$name"
 	}
 
-#list_playlists
+# List the Sonos playlists
 list_playlists() {
 	 echo -e "\n${bold} List Sonos playlist... ${reset}"
 	l=$(sonos "$loc" "$device" list_playlists)
@@ -2063,7 +2262,7 @@ list_playlists() {
     read -p "< Press Enter>"
 	}
 
-#delete_playlist
+# Delete a Sonos playlist
 delete_playlist() {
 	 echo -e "\n${bold} Delete Sonos playlist... ${reset}"
 	 
@@ -2073,7 +2272,7 @@ delete_playlist() {
 		
     	read -p "Enter playlist <playlist> to delete or [q] to quit: " pll
     	if [[ "$pll" == "q" || "$pll" == "Q" ]]; then break; fi
-		sonos "$loc" "$device" delete_playlist $pll		
+		sonos "$loc" "$device" delete_playlist "$pll" # !!! BUG !!!
 	done    
 	}
 
@@ -2433,7 +2632,6 @@ move_alarms() {
 	done
 	
 	sleep 1
-   # read -p "< Press Enter>"
 }
 
 copy_alarms() {
@@ -2885,7 +3083,7 @@ all() {
 		echo -e " 2) ${bgd}S${reset}witch Status Light ON             " " | "
 		echo -e " 3) ${bgd}M${reset}ute ON                            " " | "
 		echo -e " 4) M${bgd}u${reset}te OFF                           " " | "
-		echo -e " 5) ${bgd}S${reset}top all device                    " " | "
+		echo -e " 5) ${bgd}S${reset}top all devices                   " " | "
 		echo -e " 6)                                    " " | "
 		echo -e " 7)                                    " " | "
 		echo -e " 8)                                    " " | "
@@ -2987,13 +3185,13 @@ all_mute_off() {
 
 list_functions=$(declare -F | awk '{print $NF}' | sort | grep -E -v "^_")
 
-help_functions(){
+help_functions() {
 	echo -e "${bold}List of functions:${reset}"
 	echo "$list_functions" | column
 	#echo "$list_functions" > list_functions.txt
 }
 
-cli_help(){
+cli_help() {
 	echo -e "${bold}Help soco-cli-gui:${reset}"
 	echo
 	echo "-f	Display list of functions"

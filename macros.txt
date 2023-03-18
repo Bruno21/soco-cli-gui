@@ -1,0 +1,3 @@
+# SoCo-CLI HTTP API Server Macros file
+# Format is:
+#   macro_name = speaker <action> <parameters> [: speaker <action> <parameters> ...]
