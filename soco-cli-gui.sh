@@ -1274,6 +1274,9 @@ make_playlist() {
 }
 
 search_artist_from_library() {
+
+	playing="Search artist from library and play..."
+    echo -e "\n${bold} $playing ${reset}\n"
 	
 	echo
 	#fzf_bin=0
@@ -1331,8 +1334,6 @@ search_artist_from_library() {
 				)
 		
 			l_alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | grep -i "$artiste" | fzf "${fzf_music_folder_args[@]}")
-			echo "$l_alb" #     788: Album: The Suburbs | Artist: Arcade Fire
-		#fi
 
 		elif [ -z "$l_alb" ]; then
 			l_alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | grep -i "$artiste")
@@ -1363,7 +1364,7 @@ search_artist_from_library() {
 
 			echo -e "\nAdding ${bold}$album${reset} from ${bold}$artiste${reset} to queue and playing..."
 	
-			w=$(sonos  $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
+			sonos  $loc $device queue_album "$album" first : $device play_from_queue > /dev/null # ajoute en pos 1  et joue
 			_tia "$album"
 		fi
 	
@@ -1371,20 +1372,21 @@ search_artist_from_library() {
 }
 
 search_album_from_library() {
+
+	playing="Search album from library and play..."
+    echo -e "\n${bold} $playing ${reset}\n"
 	
 	if [ $fzf_bin -eq 1 ]; then
  		
 		fzf_music_folder_args=(
     		--border
     		--exact
-    		--header="ENTER for select album; ESC for a new search"
+    		--header="ENTER for select album; ESC to quit"
 			)
 		
 		alb=$(sonos "$loc" "$device" list_albums | tail -n+4 | fzf "${fzf_music_folder_args[@]}")
-	fi
 	
-	
-	if [ -z "$alb" ]; then
+	elif [ -z "$alb" ]; then
 		alb=$(sonos "$loc" "$device" list_albums | tail -n+4)
 		
 		while :
@@ -1418,8 +1420,6 @@ search_album_from_library() {
 		done
 	fi
 
-	#sonos "$loc" "$device" queue_search_result_number $track first : $device play_from_queue > /dev/null
-	
 	if [ -n "$alb" ]; then
 		artiste=$(echo "$alb" | awk -F":" '{print $4}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//')
 		album=$(echo "$alb" | awk -F":" '{print $3}' | awk -F"|" '{print $1}' | sed 's/^[[:blank:]]*//;s/[[:blank:]]*$//') # xargs: unterminated quote
@@ -1427,9 +1427,6 @@ search_album_from_library() {
 		
 		echo -e "\nAdding ${bold}$album${reset} from ${bold}$artiste${reset} to queue and playing..."
 	
-		#list_queue
-	
-		#w=$(sonos $loc $device queue_album "$album" first : $device play_from_queue) # ajoute en pos 1  et joue
 		sonos $loc $device queue_album "$album" first : $device play_from_queue > /dev/null # ajoute en pos 1  et joue
 		_tia "$album"
 	fi
@@ -1446,9 +1443,10 @@ in_progress() {
 }
 
 
-
-
 search_tracks_from_youtube() {
+
+	playing="Search tracks from YouTube and play..."
+    echo -e "\n${bold} $playing ${reset}\n"
 
 	# https://stackoverflow.com/questions/49804874/download-the-best-quality-audio-file-with-youtube-dl
 	
@@ -1513,7 +1511,6 @@ search_tracks_from_youtube() {
    		details=$(curl --silent "$APIVIDEOS?part=contentDetails&fields=items/contentDetails/duration,items/contentDetails/regionRestriction/blocked&key=$APIKEY&id=$idx" | jq -r '.items[]')
 
 		duration=$(echo "$details" | jq -r '.contentDetails.duration')
-   		#duration=$(curl --silent "https://www.googleapis.com/youtube/v3/videos?part=contentDetails&fields=items/contentDetails/duration&key=$APIKEY&id=$idx" | jq -r '.items[] | .contentDetails.duration')
 		duration=${duration:2}
 		duration=${duration//[HMS]/:}
 		duration=${duration:0:-1}
@@ -1589,6 +1586,9 @@ search_tracks_from_youtube() {
 
 # Search track in library -> add to queue -> play it
 search_tracks_from_library() {
+
+	playing="Search track from library and play..."
+    echo -e "\n${bold} $playing ${reset}\n"
 
 	while :
 	do    
