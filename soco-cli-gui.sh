@@ -55,12 +55,13 @@ dest_yt=$HOME/Music/YouTube
 
 # YouTube (api key and nb results)
 APIKEY="AIzaSyBtEqykacvWuWiLqq1-eIBZBrJzAYEx_xU"
-NORESULTS=20
+NORESULTS=5
 
-fzf_bin=0
+display_art=true
 
 device=""
 
+fzf_bin=0
 if (! type fzf > /dev/null 2>&1); then 
 	echo -e "Install ${bold}fzf${reset} for a better experience !"
 	echo -e "${italic}brew install fzf${reset}"
@@ -121,6 +122,7 @@ devices() {
 	nbdevices=$(echo "$discover" | grep "Sonos device(s) found" | awk '{print $1}')
 }
 
+# Test if variable is an integer
 function _is_int() { test "$@" -eq "$@" 2> /dev/null; } 
 
 _sanitize() {
@@ -132,6 +134,7 @@ _sanitize() {
    echo "${s,,}"                # convert to lowercase
 }
 
+# Trim variable
 _trim () {
     read -rd '' $1 <<<"${!1}"
 }
@@ -226,9 +229,10 @@ _display_cover_art() {
 
 # Display cover art of current
 art() {
-	art=$(sonos "$loc" "$device" album_art 2>/dev/null)
-	if [ -n "$art" ]; then
-		_display_cover_art $art
+	#if [ "$display_art" == true ]; then
+	if [ "$display_art" = true ]; then
+		art=$(sonos "$loc" "$device" album_art 2>/dev/null)
+		[ -n "$art" ] && _display_cover_art $art
 	fi
 } 
 
@@ -421,49 +425,58 @@ help() {
 	echo -e " ${greenbold}16) Volume +:${reset} turn up the volume"
 	echo -e " ${greenbold}17) Volume -:${reset} lower the volume"
 	echo
-	echo -e " ${greenbold}27) Pause on <device>:${reset} pause playback"
-	echo -e " ${greenbold}28) Prev on <device>:${reset} move to the previous track"
-	echo -e " ${greenbold}29) Next on <device>:${reset} move to the next track"
-	echo -e " ${greenbold}30) Start <device>:${reset} start playback"
-	echo -e " ${greenbold}31) Stop <device>:${reset} stop playback"
+	echo -e " ${greenbold}29) Pause on <device>:${reset} pause playback"
+	echo -e " ${greenbold}30) Prev on <device>:${reset} move to the previous track"
+	echo -e " ${greenbold}31) Next on <device>:${reset} move to the next track"
+	echo -e " ${greenbold}32) Start <device>:${reset} start playback"
+	echo -e " ${greenbold}33) Stop <device>:${reset} stop playback"
 	echo
-	echo -e " ${greenbold}32) Party mode <device>:${reset} adds all speakers in the system into a single group. The target speaker becomes the group coordinator"
-	echo -e " ${greenbold}33) Group status <device>:${reset} indicates whether the speaker is part of a group, and whether it's part of a stereo pair or bonded home theatre configuration"
-	echo -e " ${greenbold}34) Ungroup all speakers:${reset} removes all speakers in the target speaker's household from all groups"
+	echo -e " ${greenbold}35) Party mode <device>:${reset} adds all speakers in the system into a single group. The target speaker becomes the group coordinator"
+	echo -e " ${greenbold}36) Group status <device>:${reset} indicates whether the speaker is part of a group, and whether it's part of a stereo pair or bonded home theatre configuration"
+	echo -e " ${greenbold}37) Ungroup all speakers:${reset} removes all speakers in the target speaker's household from all groups"
 	echo
-	echo -e " ${greenbold}35) ➔ Infos :${reset} go to menu Infos"
-	echo -e " ${greenbold}36) ➔ Lists :${reset} go to menu Lists"
+	echo -e " ${greenbold}39) Switch Status Light:${reset}"
+	echo -e " ${greenbold}40) Rename speaker <$device>:${reset}"
+	echo
+	echo -e " ${greenbold}41) ➔ Infos :${reset} go to menu Infos"
+	echo -e " ${greenbold}42) ➔ Lists :${reset} go to menu Lists"
+	echo -e " ${greenbold}43) ➔ Alarms :${reset} go to menu Alarms"
 	echo	
-	echo -e " ${greenbold}37) Play radio from TuneIn:${reset} play favorite from TuneIn radio"
-	echo -e " ${greenbold}38) Play local .m3u playlist:${reset} play a local M3U/M3U8 playlist consisting of local audio files (in supported audio formats)"
-	echo -e " ${greenbold}39) Play local audio files:${reset} play MP3, M4A, MP4, FLAC, OGG, WMA, WAV, or AIFF audio files from your computer. Multiple filenames can be provided and will be played in sequence."
-	echo -e " ${greenbold}40) Play local directories:${reset} play all of the audio files in the specified local directory (does not traverse into subdirectories)"
-	echo -e " ${greenbold}41) Play shared links:${reset} play a shared link from Deezer,Spotify, Tidal or Apple Music"
+	echo -e " ${greenbold}45) Play radio from TuneIn:${reset} play favorite from TuneIn radio"
+	echo -e " ${greenbold}46) Play local .m3u playlist:${reset} play a local M3U/M3U8 playlist consisting of local audio files (in supported audio formats)"
+	echo -e " ${greenbold}47) Play local audio files:${reset} play MP3, M4A, MP4, FLAC, OGG, WMA, WAV, or AIFF audio files from your computer. Multiple filenames can be provided and will be played in sequence."
+	echo -e " ${greenbold}48) Play local directories:${reset} play all of the audio files in the specified local directory (does not traverse into subdirectories)"
+	echo -e " ${greenbold}49) Play shared links:${reset} play a shared link from Deezer,Spotify, Tidal or Apple Music"
 	echo	
-	echo -e " ${greenbold}42) Play albums:${reset} search album in library -> add to queue -> play"
-	echo -e " ${greenbold}43) Play artists:${reset} search artist in library -> add to queue -> play"
-	echo -e " ${greenbold}44) Play tracks:${reset} search track in library -> add to queue -> play"
-	echo -e " ${greenbold}45) Play radio stream:${reset} play the audio object given by the <uri> parameter (e.g., a radio stream URL)"
-	echo -e " ${greenbold}46) Create a playlist:${reset} create a Sonos playlist named <playlist>"
+	echo -e " ${greenbold}50) Play albums:${reset} search album in library -> add to queue -> play"
+	echo -e " ${greenbold}51) Play artists:${reset} search artist in library -> add to queue -> play"
+	echo -e " ${greenbold}52) Play tracks:${reset} search track in library -> add to queue -> play"
+	echo -e " ${greenbold}53) Play radio stream:${reset} play the audio object given by the <uri> parameter (e.g., a radio stream URL)"
+	echo -e " ${greenbold}54) Play tracks from YouTube:${reset} search video on YouTube, download and play audio track (aac) on Sonos speaker"
 	echo	
-	echo -e " ${greenbold}47) ➔ Sleeep:${reset} go to sleep menu"
-	echo	
-	echo -e " ${greenbold}48) Shazaaaam:${reset} identify current playing track, like Shazam"
-	echo -e " ${greenbold}49) Switch Status Light:${reset}"
-	echo -e " ${greenbold}50) Rename speaker <device>:${reset}"
-	echo -e " ${greenbold}51) ➔ Home :${reset} go to Home menu"
+	echo -e " ${greenbold}57) Create a playlist:${reset} create a Sonos playlist named <playlist>"
+	echo -e " ${greenbold}58) Sleep:${reset} set sleep timer"
+	echo -e " ${greenbold}59) Shazaaaam:${reset} identify current playing track, like Shazam"
+	echo -e " ${greenbold}60) ➔ Home :${reset} go to Home menu"
+	echo
+	echo -e "\n${bold}All devices Menu:${reset}"
+	echo -e " ${greenbold}1) Switch Status Light OFF:${reset} device informations"
+	echo -e " ${greenbold}2) Switch Status Light ON:${reset} device informations"
+	echo -e " ${greenbold}3) Mute ON:${reset} device informations"
+	echo -e " ${greenbold}4) Mute OFF:${reset} device informations"
+	echo -e " ${greenbold}5) Stop all devices:${reset} device informations"
+	echo -e " ${greenbold}10) Return:${reset} go to Home menu"
 	echo
 	echo -e "\n${bold}Sonos <$device> infos Menu:${reset}"
-	echo -e " ${greenbold}1) Alarms:${reset} list all of the alarms in the Sonos system" 
-	echo -e " ${greenbold}2) Groups:${reset} lists all groups in the Sonos system. Also includes single speakers as groups of one, and paired/bonded sets as groups"
-	echo -e " ${greenbold}3) Info:${reset} device informations"
-	echo -e " ${greenbold}4) Shares:${reset} list the local music library shares"
-	echo -e " ${greenbold}5) Reindex shares:${reset} start a reindex of the local music libraries"
-	echo -e " ${greenbold}6) Sysinfo:${reset} prints a table of information about all speakers in the system"
-	echo -e " ${greenbold}7) All zones:${reset} prints a simple list of comma separated visible zone/room names. Use all_zones (or all_rooms) to return all devices including ones not visible in the Sonos controller apps"
-	echo -e " ${greenbold}8) Refreshing the Local Speaker List:${reset} refresh speaker cache"
-	echo -e " ${italic}9) Delete the local speaker cache file:${reset} delete speaker cache"
-	echo -e " ${italic}10) Return:${reset} go to Home menu"
+	echo -e " ${greenbold}3) Groups:${reset} lists all groups in the Sonos system. Also includes single speakers as groups of one, and paired/bonded sets as groups"
+	echo -e " ${greenbold}4) Info:${reset} device informations"
+	echo -e " ${greenbold}5) Shares:${reset} list the local music library shares"
+	echo -e " ${greenbold}6) Reindex shares:${reset} start a reindex of the local music libraries"
+	echo -e " ${greenbold}7) Sysinfo:${reset} prints a table of information about all speakers in the system"
+	echo -e " ${greenbold}8) All zones:${reset} prints a simple list of comma separated visible zone/room names. Use all_zones (or all_rooms) to return all devices including ones not visible in the Sonos controller apps"
+	echo -e " ${greenbold}9) Refreshing the Local Speaker List:${reset} refresh speaker cache"
+	echo -e " ${greenbold}10) Delete the local speaker cache file:${reset} delete speaker cache"
+	echo -e " ${greenbold}11) Return:${reset} go to Home menu"
 	echo
 	echo -e "\n${bold}Sonos <$device> lists Menu:${reset}"
 	echo -e " ${greenbold}1) Favourite radio stations:${reset} lists the favourite radio stations"
@@ -472,6 +485,7 @@ help() {
 	echo -e " ${greenbold}3) Queue:${reset} list the tracks in the queue"
 	echo -e " ${greenbold}4) Remove from queue:${reset} remove tracks from the queue. Track numbers start from 1. (single integers, sequences ('4,7,3'), ranges ('5-10')"
 	echo -e " ${greenbold}5) Clear queue:${reset} clears the current queue."
+	echo -e " ${greenbold}6) Play from queue:${reset} play track from queue."
 	echo
 	echo -e " ${greenbold}7) List artists:${reset} list artists on library"
 	echo -e " ${greenbold}8) List albums:${reset} list albums on library"
@@ -483,23 +497,51 @@ help() {
 	echo -e " ${greenbold}15) Add a Sonos playlist to queue:${reset} add <playlist_name> to the queue. The number in the queue of the first track in the playlist will be returned"
 	echo -e " ${greenbold}16) Remove a track from a Sonos playlist:${reset} remove tracks from the queue. Track numbers start from 1. (single integers, sequences ('4,7,3'), ranges ('5-10')"
 	echo -e " ${greenbold}20) Return:${reset} go to Home menu"
-
+	echo
+	echo -e "\n${bold}Sonos <$device> alarms Menu:${reset}"
+	echo -e " ${greenbold}1) Alarms:${reset} lists all alarms"
+	echo -e " ${greenbold}2) Create alarms:${reset} create an alarm"
+	echo -e " ${greenbold}3) Remove alarms:${reset} delete some alarms"
+	echo -e " ${greenbold}4) Modify alarms:${reset} modify some alarms"
+	echo -e " ${greenbold}5) Enable/disable alarms:${reset} enable/disable some alarms"
+	echo -e " ${greenbold}6) Move alarms:${reset} move  an alarm to another speaker"
+	echo -e " ${greenbold}7) Snooze alarms:${reset} snooze current alarm"
+	echo -e " ${greenbold}8) Copy alarms:${reset} copy an alarm to another speaker"
+	echo -e " ${greenbold}9) Stop alarms:${reset} stop current alarm"
+	echo -e " ${greenbold}10) Stop all alarms:${reset} stop alarms on all speakers"
+	echo -e " ${greenbold}11) Return:${reset} go to Home menu"
+	echo
 	echo -e "\n${bold}SocoCLI Gui configuration:${reset}"
-	echo -e "${greenbold}see at the beginning of the script...${reset}"
-
+	echo -e "${greenbold}see at the beginning of the script::${reset}"
 	echo -e " ${greenbold}GITHUB_TOKEN= :${reset} add your Github token (needed to get the soco-cli update)"
 	echo -e " ${greenbold}step=2:${reset} step for up/down volume"
 	echo -e " ${greenbold}default=\"Salon\":${reset} default Sonos device (useful when running ${italic}soco-cli-gui.sh <function>${reset})"
-
-	echo
+	echo -e " ${greenbold}default_snooze=10:${reset} default snooze alarm duration in minute"
+	echo -e " ${greenbold}dest_yt=$HOME/Music/YouTube:${reset} YouTube downloaded folder"
+	echo -e " ${greenbold}APIKEY="":${reset} YouTube api key"
+	echo -e " ${greenbold}NORESULTS=5:${reset} number of result for YouTube request"
+	echo -e " ${greenbold}radio_uri=:${reset} Array list of radio stream." "Example: (['France Info']=\"http://icecast.radiofrance.fr/franceinfo-midfi.mp3\""
+ 	echo -e 
+	echo -e "\n${bold}Plus:${reset}"
+	echo -e "Some functions works better with ${underline}fzf${reset} utility: consider install it (https://github.com/junegunn/fzf/)"
+	echo -e "Others utility: ${underline}mediainfo${reset} (https://mediaarea.net/fr/MediaInfo)"
+ 	echo -e 
 	echo -e "$(sonos-discover --docs)"
 	echo -e "\n<Press Enter to quit>"
 	read -p ""
 	}
 
 
+		if [[ "$dev" == *"$default"* ]]; then
+			device="$default"
+		else
+			device=$(echo "$dev" | cut -d ' ' -f1 | grep -v $default | sed -n '1p')
+		fi
+
 inform() {
 	device="$1"
+	[ -z "$device" ] && device="$default"
+
 	info=$(sonos "$loc" "$device" info)
 	model_name=$(echo "$info" | grep "model_name" | awk -F"=" '{print $2}')
 	model_number=$(echo "$info" | grep "model_number" | awk -F"=" '{print $2}')
@@ -569,12 +611,12 @@ soco() {
 		echo -e "11) volume ${bgd}11${reset}         " " | " "31) ${bgd}n${reset}ext on $device12       " " | " "51) Play artists (${bgd}x${reset})      "
 		echo -e "12) ${bgd}m${reset}ute ON           " " | " "32) ${bgd}s${reset}tart $device12         " " | " "52) Play tracks (${bgd}y${reset})      "
 		echo -e "13) volume ${bgd}13${reset}         " " | " "33) s${bgd}t${reset}op $device12          " " | " "53) Play radio stream      "
-		echo -e "14) m${bgd}u${reset}te OFF          " " | " "34)                            " " | " "54) Create a playlist        "
-		echo -e "15) volume ${bgd}15${reset}         " " | " "35) Party mode $device12    " " | " "55) Sleeep (${bgd}j${reset})    "
-		echo -e "16) volume ${bgd}+${reset}          " " | " "36) ${bgd}G${reset}roup status $device12    | " "56) Sha${bgd}z${reset}aaaam "
-		echo -e "17) volume ${bgd}-${reset}          " " | " "37) Ungroup all speakers       " " | " "57)    "
-		echo -e "18)                   " " | " "38)                            " " | " "58)   "
-		echo -e "19)                   " " | " "39) S${bgd}w${reset}itch Status Light        " " | " "59)    "
+		echo -e "14) m${bgd}u${reset}te OFF          " " | " "34)                            " " | " "54) Play tracks from YouTube ${red}*${reset}"
+		echo -e "15) volume ${bgd}15${reset}         " " | " "35) Party mode $device12    " " | " "55)"
+		echo -e "16) volume ${bgd}+${reset}          " " | " "36) ${bgd}G${reset}roup status $device12    | " "56)"
+		echo -e "17) volume ${bgd}-${reset}          " " | " "37) Ungroup all speakers       " " | " "57) Create a playlist        "
+		echo -e "18)                   " " | " "38)                            " " | " "58) Sleeep (${bgd}j${reset})    "
+		echo -e "19)                   " " | " "39) S${bgd}w${reset}itch Status Light        " " | " "59) Sha${bgd}z${reset}aaaam "
 		echo -e "20)                   " " | " "40) Rename speaker $device12" " | " "60) ➔ ${bgd}H${reset}ome     "
 	
 	
@@ -623,9 +665,10 @@ soco() {
 			51|x|X) search_artist_from_library;;
 			52|y|Y) search_tracks_from_library;;
 			53) play_uri;;
-			54) make_playlist;;
-			55|j|J) sleeep;;
-			56|z|Z) shazaaaam;;
+			54) search_tracks_from_youtube;;
+			57) make_playlist;;
+			58|j|J) sleeep;;
+			59|z|Z) shazaaaam;;
 			60|h|H) exec "$0";;
 			*) echo -e "\n${red}Oops!!! Please Select Correct Choice${reset}";
 			   echo -e "Press ${bold}ENTER${reset} To Continue..." ; read -e ;;
@@ -639,42 +682,54 @@ soco() {
 franceinfo() {
 	playing="Playing France Info..."
 	echo -e "\n${bold} $playing ${reset}"
-	sonos "$loc" "$device" play_fav 'franceinfo' && sleep 2
+	sonos "$loc" "$device" play_fav 'franceinfo'
+	art
+	sleep 2
 	}
 
 # Playing France Inter
 franceinter() {
 	playing="Playing France Inter..."
 	echo -e "\n${bold} $playing ${reset}"
-	sonos "$loc" "$device" play_fav 'france inter' && sleep 2
+	sonos "$loc" "$device" play_fav 'france inter'
+	art
+	sleep 2
 	}
 
 # Playing K6 FM
 k6fm() {
 	playing="Playing K6 FM..."
     echo -e "\n${bold} $playing ${reset}"
-    sonos "$loc" "$device" play_fav 'K6 FM' && sleep 2
+    sonos "$loc" "$device" play_fav 'K6 FM'
+    art
+    sleep 2
 	}
 
 # Playing Rires et Chansons
 rires() {
 	playing="Playing Rires et Chansons..."
     echo -e "\n${bold} $playing ${reset}"
-    sonos "$loc" "$device" play_fav 'Rire et Chansons' && sleep 2
+    sonos "$loc" "$device" play_fav 'Rire et Chansons'
+    art
+    sleep 2
 	}
 
 # Playing RTL
 rtl() {
 	playing="Playing RTL..."
     echo -e "\n${bold} $playing ${reset}"
-	sonos "$loc" "$device" play_fav 'RTL' && sleep 2
+	sonos "$loc" "$device" play_fav 'RTL'
+	art
+	sleep 2
 	}
 
 # Playing Deezer Flow
 deezer_flow() {
 	playing="Playing Deezer Flow..."
     echo -e "\n${bold} $playing ${reset}"
-    sonos "$loc" "$device" play_fav 'Flow' && sleep 2
+    sonos "$loc" "$device" play_fav 'Flow'
+    art
+    sleep 2
 	}
 
 # Playing ...
@@ -784,12 +839,15 @@ next() {
 party_mode() {
     echo -e "\n${bold} Party mode $device... ${reset}"
     sonos "$loc" "$device" party_mode
-    sonos "$loc" "$device" groupstatus && sleep 2
+    echo
+    sonos "$loc" "$device" groupstatus 
+    echo -e "\n${italic}Remove speakers individually using ungroup, or use ungroup_all.${reset}" && sleep 2
 	}
 
 # Groupstatus
 groupstatus() {
     echo -e "\n${bold} Group status $device... ${reset}"
+    echo
     sonos "$loc" "$device" groupstatus && sleep 2
 	}
 
@@ -797,20 +855,23 @@ groupstatus() {
 ungroup_all() {
     echo -e "\n${bold} Ungroup all speakers... ${reset}"
     sonos "$loc" "$device" ungroup_all
+    echo
     sonos "$loc" "$device" groupstatus && sleep 2
 	}
 
 # Rename
 rename_spk() {
     echo -e "\n${bold} Rename speaker $device... ${reset}"
+    echo
+    read -p "Enter new name or (q) to quit: " newname
     
-    read -p "New name: " newname
-    sonos "$loc" "$device" rename $newname && sleep 2
-    
-    main
-    #devices
-    #ScriptLoc=$(readlink -f "$0")
-    #exec "$ScriptLoc"
+    [[ "$newname" =~ ^[qQ] ]] && return
+    if [ -n "$newname" ]; then
+    	sonos "$loc" "$device" rename $newname && sleep 2
+   		main
+   	else
+   		echo -e "${red}Wrong name !${reset}"
+   	fi
 	}
 
 vol+() {
@@ -1545,6 +1606,7 @@ search_tracks_from_youtube() {
    			magick "$thumb" -quality 75 -resize 300x300\> $tmp_path/$name
    			
    			if [ -f "$tmp_path/$name" ]; then
+   				yt_thumbs+=("$tmp_path/$name")
 				printf "\n\t\033]1337;File=;width=300px;inline=1:`cat $tmp_path/$name | base64`\a\n"
 			fi
 
@@ -1554,29 +1616,46 @@ search_tracks_from_youtube() {
 	done <<< "$(echo "$result" | jq -c '.')"
 		
 	nb=${#yt_urls[@]}
+	videos=()
 	
 	while :
 	do
-    	read -e -p $'\e[1mEnter video number to download/listen or q to quit: \e[1m' i
-    	echo
+    	read -e -p $'\e[1mEnter videos numbers [3 6 12] to download/listen or q to quit: \e[0m' j
+    	echo -e "${reset}"
 
-    	[ "$i" == "q" ] && break
-    	if ((i >= 1 && i <= $nb)); then
-        	((i=i-1))
-        	youtube_title=${yt_titles[$i]}
-        	youtube_duration=${yt_durations[$i]}
-        	youtube_url=${yt_urls[$i]}
-
-			if [ -n "$youtube_url" ]; then
+    	[ "$j" == "q" ] && break
+    	
+    	if [ -z "${j//[0-9\ ]}" ]; then
+    		videos=( $j )
+    		echo "${videos[@]}"
+    		
+    		j=0
+    		for i in "${videos[@]}"
+    		do
+    			if ! ((i >= 1 && i <= $nb)); then unset videos["$j"]; fi 			
+    			((j=j+1))
+			done		
+		    		
+			if [ "${#videos[@]}" -gt 0 ]; then
+				echo -e "${bold}Downloading vidéos from YouTube...${reset}"
+    			for i in "${videos[@]}"
+    			do
+    				((i=i-1))
+    				echo -e "\t${yt_titles[$i]}: ${italic}${yt_urls[$i]}${reset}"
+    			done
 			
-				yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames
-				filename=$(yt-dlp -f 140 $youtube_url -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames --get-filename)
+			
+				echo "${yt_urls[@]}" | xargs -n 1 -P 8 -I {} yt-dlp -f 140 -P $dest_yt --restrict-filenames -o "%(title)s.%(ext)s" {} 2>&1 > /dev/null
 
-				echo -e "\nPlaying ${bold}$youtube_title${reset} ($youtube_duration) (Ctrl-C to quit)\n"
-				sonos  $loc $device play_file "$filename"
-				
-			fi
-
+    			for i in "${videos[@]}"
+    			do
+    				((i=i-1))
+    				filename=$(yt-dlp -f 140 "${yt_urls[$i]}" -P $dest_yt -o "%(title)s.%(ext)s" --restrict-filenames --get-filename)
+					echo -e "\nPlaying ${bold}${yt_titles[$i]}${reset} (${yt_durations[$i]}) (Ctrl-C to quit)\n"
+					printf "\n\t\033]1337;File=;width=300px;inline=1:`cat ${yt_thumbs[$i]} | base64`\a\n"
+					#sonos  $loc $device play_file "$filename"
+				done
+			fi		
     	fi
 	done
 
@@ -3242,10 +3321,7 @@ cli_help() {
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all_mute_on" "Sets the mute setting of all speaker (coordinators) to 'on'."
 
 	echo -e "\n${greenbold}Sleep${reset}"
-	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep" "Sleep menu"
-	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep_duration" "Device goes to sleep in <duration>."
-	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep_timer" "Device goes to sleep at <time>."
-	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep_cancel" "Cancel timer"
+	printf "| ${bold}%-25s${reset} | %-126s \n" "sleeep" "Set sleep timer (duration / time / cancel)"
 
 	echo -e "\n${greenbold}Light${reset}"
 	printf "| ${bold}%-25s${reset} | %-126s \n" "all_status_light_off" "Switch all speaker's status light off."
