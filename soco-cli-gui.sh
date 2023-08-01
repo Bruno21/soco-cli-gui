@@ -84,6 +84,7 @@ fzf_args=(
 	--layout=reverse
 	--info=hidden
     --border
+    --no-sort
 	)
 
 #   --prompt='Play'
@@ -1049,7 +1050,7 @@ play_local_audio_file() {
 	while IFS= read -r line; do
 		if [ -f "$line" ]; then
 			echo -e "\n${bold}Currently playing ...${reset}\n"
-			printf " %-2s %-25s  %-35s %-35s %-12s %-10s \n" "N°" "Artist" "Track" "Album" "Duration" "Year"
+			printf " %-2s %-25s %-35s %-35s %-12s %-10s \n" "N°" "Artist" "Track" "Album" "Duration" "Year"
 			[ "$mediainfo" = true ] && _minfo "${line}" "$i"
 			local _x="$album"
 			[ "$_x" != "$_y" ] && _display_cover_art "$line" 
@@ -2588,36 +2589,82 @@ soco_alarms() {
 
 # Alarms
 alarms() {
-    echo -e "\n${bold} Alarms... ${reset}"
+    echo -e "\n${bold} Current Alarms... ${reset}\n"
 
-    list_alarms
-    echo "$court_ala"
+    al=$(list_alarms)
+    echo "$al"
     echo
     read -p "< Press Enter>"
 	}
 
 list_alarms() {
-    long_ala=$(sonos "$loc" "$device" alarms)
-    #long_ala=$(cat long_alarm.txt)
-	court_ala=$(echo "$long_ala" | cut -d "|" -f 1,2,3,4,5,6,7,8,9)
+    long_ala=$(sonos "$loc" "$device" alarms | sed '1,3d')
+
+    # Alarm ID
+    # Speaker
+    # 1: Start Time
+    # 2: Duration
+    # 3: Recurrence 
+    # 4: Enabled
+    # 5: Title
+    # 6: Play Mode
+    # 7: Vol.
+    # 8: Incl. Grouped
+    
+	#court_ala=$(echo "$long_ala" | sed '1,3d'| cut -d "|" -f 1,2,3,4,5,6,7,8,9,10)
+	
+	echo
+	var=
+	tot=
+	newline=$'\n'
+	var=$(printf "%3s | %-7s | %5s | %-8s | %-10s | %-7s | %-50s | %-10s | %3s | %-7s \n" "ID" "Speaker" "Start" "Duration" "Recurrence" "Enabled" "Title" "Mode" "Vol" "Grouped")
+	tot+="${var}${newline}"
+	var=$(printf "%137s\n" " " | tr ' ' '-')
+	tot+="${var}${newline}"
+	
+	while IFS= read -r line; do
+	
+		id=$(echo "$line" | awk -F"|" '{print $2}' | xargs)
+		speaker=$(echo "$line" | awk -F"|" '{print $3}' | xargs)
+		start=$(echo "$line" | awk -F"|" '{print $4}' | xargs)
+		duration=$(echo "$line" | awk -F"|" '{print $5}' | xargs)
+		reccurence=$(echo "$line" | awk -F"|" '{print $6}' | xargs)
+		enabled=$(echo "$line" | awk -F"|" '{print $7}' | xargs)
+		
+		title=$(echo "$line" | awk -F"|" '{print $8}' | xargs)
+		# https://unix.stackexchange.com/questions/609125/padding-unicode-strings-with-bashs-printf
+		bytes=$(printf '%s' "$title" | wc -c)
+		chars=$(printf '%s' "$title" | wc -m)
+		n=$((50+bytes-chars))
+
+		mode=$(echo "$line" | awk -F"|" '{print $9}' | xargs)
+		vol=$(echo "$line" | awk -F"|" '{print $10}' | xargs)
+		grouped=$(echo "$line" | awk -F"|" '{print $11}' | xargs)
+		
+		var=$(printf "%3d | %-7s | %5s | %-8s | %-10s | %-7s | %-${n}s | %-10s | %3s | %-7s \n" "${id}" "${speaker}" "${start}" "${duration}" "${reccurence}" "${enabled}" "${title}" "${mode}" "${vol}" "${grouped}")
+		tot+="${var}${newline}"
+	done <<< "$long_ala"
+	
+	echo "$tot"
 }
 
 remove_alarms() {
-    echo -e "\n${bold} Remove alarms... ${reset}"
+    echo -e "\n${bold} Remove alarms... ${reset}\n"
     
-    list_alarms
-    echo "$court_ala"
+	echo -e "${underline}Current alarms:${reset}"
+    al=$(list_alarms)
+    echo "$al"
     echo
     j=""
     k=""
     
    	while :
 	do    
-    	read -p "Enter the <Alarm ID> alarm to remove or [q] to quit: " trk
+    	read -p "Enter the <Alarm ID> alarm (1,12,35) to remove or [q] to quit: " trk
 		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
 			break
 		else
-			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')
+			ala_id=$(echo "$al" | sed '1,2d' | awk -F "|" '{print $1}')
 			# suite d'<alarm id>
 			h=$(echo "$trk" | sed 's/,/ /g')
 			for i in ${h}
@@ -2696,10 +2743,11 @@ snooze_alarms() {
 }
 
 move_alarms() {
-    echo -e "\n${bold} Move alarm to speaker... ${reset}"
+    echo -e "\n${bold} Move alarm to speaker... ${reset}\n"
     
-    list_alarms
-    echo "$court_ala"
+	echo -e "${underline}Current alarms:${reset}"
+    al=$(list_alarms)
+    echo "$al"
     echo
     
    	while :
@@ -2708,10 +2756,10 @@ move_alarms() {
 		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
 			break
 		else
-			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
+			ala_id=$(echo "$al" | sed '1,3d' | awk -F "|" '{print $1}')						
 			if [[ $ala_id =~ $trk ]]; then
 			
-				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
+				actual_speaker=$(echo "$al" | awk -F "|" -v var="$trk" '($1 == var) {print $2}' | xargs | sed 's/ , /,/g')				
 				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
 				#other="${other_speakers[@]}"
 				other="${other_speakers[*]}"
@@ -2733,10 +2781,12 @@ move_alarms() {
 }
 
 copy_alarms() {
-    echo -e "\n${bold} Copy alarm to speaker... ${reset}"
+    echo -e "\n${bold} Copy alarm to speaker... ${reset}\n"
     
-    list_alarms
-    echo "$court_ala"
+    
+	echo -e "${underline}Current alarms:${reset}"
+    al=$(list_alarms)
+    echo "$al"
     echo
     
    	while :
@@ -2745,10 +2795,10 @@ copy_alarms() {
 		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
 			break
 		else
-			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
+			ala_id=$(echo "$al" | sed '1,3d' | awk -F "|" '{print $1}')						
 			if [[ $ala_id =~ $trk ]]; then
 			
-				actual_speaker=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3}' | xargs | sed 's/ , /,/g')				
+				actual_speaker=$(echo "$al" | awk -F "|" -v var="$trk" '($1 == var) {print $2}' | xargs | sed 's/ , /,/g')				
 				other_speakers=$(echo "$dev" | grep -v $actual_speaker | cut -d ' ' -f1)
 				#other="${other_speakers[@]}"
 				other="${other_speakers[*]}"
@@ -2809,9 +2859,9 @@ al_spec() {
     	else
     		REGEX32="ON_([0-6]{1,6})$"
     		if [[ $recurrence =~ $REGEX32 ]]; then
-    			#MATCH32="${BASH_REMATCH[0]}"   			
-				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
-					dddddd=$(echo "$MATCH0" | awk -F"_" '{print $2}')
+    			MATCH32="${BASH_REMATCH[0]}"   			
+				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH32"); then
+					dddddd=$(echo "$MATCH32" | awk -F"_" '{print $2}')
 					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
 					[[ $dddddd =~ 1 ]] && ddd+="Monday "
 					[[ $dddddd =~ 2 ]] && ddd+="Tuesday "
@@ -2841,34 +2891,59 @@ al_spec() {
     	[[ $enabled =~ $REGEX4 ]] || [[ $enabled == "_" ]] && break
   	done
    
- 
+	##### to_play
+	
+    IFS=$'\n'
+	#streams=( $(sonos "$loc" "$device" list_favs | awk NF | awk -F":" '{print $2}') )
+	streams=( $(cat list_favs.txt) )
+	streams+=('CHIME')
+	streams+=('*No change*')
+
+	#echo "${streams[@]}"
+ 	fzf_bin=0
+ 	
     if [ $fzf_bin -eq 1 ]; then
  		radio_uri+=([*No change*]="_")
    
  		header=" Choose *No change* to keep the same alarm"
- 		prompt="Choose a radio or *CHIME* for an alarm: "
+ 		prompt="Choose a Sonos favourite (except podcasts) or *CHIME* for an alarm: "
  		
-   		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt" --header "$header")
-		to_play_fzf=${radio_uri[${choice:5}]}
+   		choice=$(printf "Play %s\n" "${streams[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt" --header "$header")
+		to_play_fzf=${choice:5}
+		[ "$to_play_fzf" == "*No change*" ] && to_play_fzf="_"
  	fi
 
-	uri=$(echo $5 | sed 's/\"//g')
-	[ -z "$to_play_fzf" ] && to_play_fzf="$uri"
-   
+	[ -z "$to_play_fzf" ] && to_play_fzf=$(echo $5 | sed 's/\"//g')
+ 
+ 	echo "$to_play_fzf"
+ 	
+ 	echo -e "\n${italic}Favoris:${reset}"
+	( IFS=$'\n'; echo "${streams[*]}" )
+ 	echo
+ 	
+ 	#i=0
+	#for m in "${streams[@]}"
+	#do
+   #		echo  "$(( i++ ))) $m"
+	#done | pr -w156 -ts" " --columns 3
+  
     while :
 	do
-    	read -e -p "Play (CHIME or URI): " -i "$to_play_fzf" to_play
-    	#REGEX5="CHIME|^(http|https)://"
-    	REGEX5="CHIME|^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
-    	if [[ $to_play =~ $REGEX5 ]] || [[ $to_play == "_" ]]; then
-    		if [[ $to_play != "_" ]]; then
-    			MATCH5="${BASH_REMATCH[0]}"
-    			# echo "$MATCH5"
-    			[ $MATCH5 != "CHIME" ] && to_play="\"$to_play\""
-    		fi
-    		break  		
+    	read -e -p "Play (FAV, CHIME or _ (do not change)): " -i "$to_play_fzf" to_play
+
+		#[ "$to_play" == "*No change*" ] || [ "$to_play" == "_" ] && to_play_fzf="_"
+ 		if (grep -q -i "$to_play" <<< "${streams[@]}") || [ "$to_play" == "_" ]; then
+ 			break
+ 		else
+ 			echo -e "${red}Non matching with a favorite !${reset}"
  		fi
-   	done
+	done
+
+    if [[ $to_play =~ , ]]; then 
+   		# if $to_play contain a comma, the spec separator, only get the first part of favorite
+   		to_play=$(echo "$to_play" | awk -F"," '{print $1}')
+   	fi
+
    
     while :
 	do
@@ -2901,10 +2976,12 @@ al_spec() {
 }
 
 modify_alarms() {
-    echo -e "\n${bold} Modify alarms... ${reset}"
+    echo -e "\n${bold} Modify alarms... ${reset}\n"
     
-    list_alarms
-    echo "$court_ala"
+	echo -e "${underline}Current alarms:${reset}"
+    al=$(list_alarms)
+    #al=$(cat list_alarms.txt)
+    echo "$al"
     echo
     
    	while :
@@ -2913,11 +2990,15 @@ modify_alarms() {
 		if [[ "$trk" == "q" || "$trk" == "Q" ]]; then 
 			break
 		else
-			ala=$(echo "$court_ala" | sed '1,3d')
-			ala_id=$(echo "$court_ala" | sed '1,3d' | awk -F "|" '{print $2}')						
+			ala=$(echo "$al" | sed '1,3d')
+			ala_id=$(echo "$al" | sed '1,3d' | awk -F "|" '{print $1}')
+			
+			#echo "ala: $ala"
+			#echo "ala_id: $ala_id"
+							
 			if [[ $ala_id =~ $trk ]]; then
 			
-				to_modify=$(echo "$long_ala" | awk -F "|" -v var="$trk" '($2 == var) {print $3","$4","$5","$6","$7","$8","$9","$10","$11}' | xargs | sed 's/ , /,/g')
+				to_modify=$(echo "$al" | sed '1,2d' | awk -F "|" -v var="$trk" '($1 == var) {print $2","$3","$4","$5","$6","$7","$8","$9","$10}' | xargs | sed 's/ , /,/g')
 				
 				echo "to_modify: $to_modify"
 				
@@ -2935,6 +3016,8 @@ modify_alarms() {
 				play_mode="${ids[6]}"
 				volume="${ids[7]}"
 				grouped="${ids[8]^^}"
+				
+				echo "$to_play"
 				
 				al_spec $start_time $duration $recurrence $enabled "$to_play" $play_mode $volume $grouped
 				
@@ -2954,10 +3037,11 @@ modify_alarms() {
 }
 
 enable_alarms() {
-    echo -e "\n${bold} Enable alarms... ${reset}"
+    echo -e "\n${bold} Enable alarms... ${reset}\n"
 
-    list_alarms
-    echo "$court_ala"
+	echo -e "${underline}Current alarms:${reset}"
+    al=$(list_alarms)
+    echo "$al"
     echo
     
    	while :
@@ -3000,11 +3084,12 @@ create_alarms() {
 	# grouped speakers (ON/OFF , YES/NO)
 	# 07:00,01:30,WEEKDAYS,ON,"http://stream.live.vc.bbcmedia.co.uk/bbc_radio_fourfm",NORMAL,50,OFF
 
-    echo -e "\n${bold} Create Sonos alarms... ${reset}"
-    echo -e "\n"
+    echo -e "\n${bold} Create Sonos alarms... ${reset}\n"
 
-    list_alarms
-    echo "$court_ala"
+	echo -e "${underline}Current alarms:${reset}"
+    #al=$(list_alarms)
+    al=$(cat list_alarms.txt)
+    echo "$al"
     echo
 
 	fzf_recurrence=("DAILY" "ONCE" "WEEKDAYS" "WEEKENDS" "ON_DDDDDD")
@@ -3015,6 +3100,8 @@ create_alarms() {
 
 	shopt -s nocasematch
 
+	echo -e "${underline}Creating new alarm:${reset}\n"
+	
    	while :
 	do
     	read -p "Start time (HH:MM): " start_time    
@@ -3048,9 +3135,9 @@ create_alarms() {
     	else
     		REGEX32="ON_([0-6]{1,6})$"
     		if [[ $recurrence =~ $REGEX32 ]]; then
-    			#MATCH32="${BASH_REMATCH[0]}"   			
-				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH0"); then
-					dddddd=$(echo "$MATCH2" | awk -F"_" '{print $2}')
+    			MATCH32="${BASH_REMATCH[0]}"
+				if (! grep -qE '([0-6])\1{1}' <<< "$MATCH32"); then
+					dddddd=$(echo "$MATCH32" | awk -F"_" '{print $2}')
 					[[ $dddddd =~ 0 ]] && ddd+="Sunday "
 					[[ $dddddd =~ 1 ]] && ddd+="Monday "
 					[[ $dddddd =~ 2 ]] && ddd+="Tuesday "
@@ -3058,7 +3145,6 @@ create_alarms() {
 					[[ $dddddd =~ 4 ]] && ddd+="Thursday "
 					[[ $dddddd =~ 5 ]] && ddd+="Friday "
 					[[ $dddddd =~ 6 ]] && ddd+="Saturday "
-					
 					read -p "Recurrence: $ddd OK ? (y/n)" rep_alarm
 	    			REGEX33="Y|y|O|o"
     				[[ $rep_alarm =~ $REGEX33 ]] && break
@@ -3076,7 +3162,7 @@ create_alarms() {
  		header=" Enable / disable alarm"
  		prompt="Enable / disable alarm: "
  		
-   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
+   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
 		enable_fzf=${choice:5}
  	fi
     
@@ -3087,26 +3173,51 @@ create_alarms() {
     	[[ $enabled =~ $REGEX4 ]] && break
   	done
  
+ 
+ 	##### to_play
 
- 	if [ $fzf_bin -eq 1 ]; then
- 		header=" Choose a radio or *CHIME* for an alarm"
- 		prompt="Choose a radio or *CHIME* for an alarm: "
+ 	IFS=$'\n'
+	streams=( $(sonos "$loc" "$device" list_favs | awk NF | awk -F":" '{print $2}') )
+	streams+=(' CHIME')
+
+   	if [ $fzf_bin -eq 1 ]; then
  		
-   		choice=$(printf "Play %s\n" "${!radio_uri[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
-		to_play_fzf=${radio_uri[${choice:5}]}
- 	fi
+ 		# Podcast => Error: list index out of range
+ 		header="ENTER for select favourite; ESC to quit"
+    	prompt="Choose a Sonos favourite (except podcasts): "
+
+		fzf_music_folder_args=(
+    		--border
+    		--exact
+    		--header="ENTER for select favourite; ESC to quit"
+    		--prompt="Choose a Sonos favourite (except podcasts): "
+			)
+		
+		choice=$(printf "Play %s\n" "${streams[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt" --header="$header")
+		to_play_fzf=${choice:6}
+		
+	else	
+		f=$(sonos "$loc" "$device" list_favs | awk NF)
+	fi
+	
 	
     while :
 	do
     	read -e -p "Play (CHIME or URI): " -i "$to_play_fzf" to_play
-    	#REGEX5="CHIME|^(http|https)://"
-    	REGEX5="CHIME|^(https?|ftp|file)://[-[:alnum:]\+&@#/%?=~_|!:,.;]+"
-    	if [[ $to_play =~ $REGEX5 ]]; then
-    		MATCH5="${BASH_REMATCH[0]}"
-    		[ $MATCH5 != "CHIME" ] && to_play="\"$to_play\""
-    		break  		
+
+ 		if grep -q -i "$to_play" <<< "${streams[@]}"; then
+ 			break
+ 		else
+ 			echo -e "${red}Non matching with a favorite !${reset}"
  		fi
-   	done
+	done
+   
+    if [[ $to_play =~ , ]]; then 
+   		# if $to_play contain a comma, the spec separator, only get the first part of favorite
+   		to_play=$(echo "$to_play" | awk -F"," '{print $1}')
+   	fi
+   
+   	########
 
  	if [ $fzf_bin -eq 1 ]; then
  		header=" Choose play mode"
@@ -3125,7 +3236,7 @@ create_alarms() {
    
    	while :
 	do
-    	read -p "Volume (0 - 100): " volume
+    	read -e -p "Volume (0 - 100): " -i "13" volume
     	if [ $volume -ge 0 ] && [ $volume -le 100 ]; then
     		break
  		fi
@@ -3135,13 +3246,13 @@ create_alarms() {
  		header=" Grouped speakers"
  		prompt="Grouped speakers: "
  		
-   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | sort | fzf "${fzf_args[@]}" --prompt "$prompt")
+   		choice=$(printf "Play %s\n" "${fzf_yes_no[@]}" | fzf "${fzf_args[@]}" --prompt "$prompt")
 		gs_fzf=${choice:5}
  	fi
     
    	while :
 	do
-	    read -e -p "Grouped speakers (ON/OFF , YES/NO): " -i "$gs_fzf" grouped
+	    read -e -p "Grouped speakers (ON/OFF or YES/NO): " -i "$gs_fzf" grouped
 	    REGEX8="ON|OFF|YES|NO"
     	[[ $grouped =~ $REGEX8 ]] && break
   	done
@@ -3149,13 +3260,18 @@ create_alarms() {
 	shopt -u nocasematch
 
 	alarm_spec="$start_time,$duration,${recurrence^^},${enabled^^},$to_play,${play_mode^^},$volume,${grouped^^}"
-	echo -e "\nalarm_spec: $alarm_spec"
 	 
-  	#sonos "$loc" "$device" create_alarm "$alarm_spec"
-    a=$(sonos "$loc" "$device" create_alarm "$alarm_spec")
-    echo -e "\n $a \n"			# vide
+  	sonos "$loc" "$device" create_alarm "$alarm_spec"
+    result=$?
+    [ "$result" = 0 ] && echo -e "\n${italic}A new alarm was created with following specifications:${reset} $alarm_spec" || echo -e "\n${red}Wrong specifications:${reset} $alarm_spec"
+
     read -p "< Press Enter>"
   	
+}
+
+new_alarm() {
+echo
+
 }
 
 
